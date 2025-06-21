@@ -1,6 +1,6 @@
 # Document to Markdown Converter
 
-A powerful, modular Python application that converts various document types to Markdown format with AI-driven image extraction and automatic section numbering.
+A powerful, modular Python application that converts various document types to Markdown format with AI-driven image extraction and processing.
 
 ## Supported Formats
 
