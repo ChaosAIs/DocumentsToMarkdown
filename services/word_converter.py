@@ -9,12 +9,15 @@ import sys
 from pathlib import Path
 from typing import List
 import re
+import zipfile
+import io
 
 try:
     from docx import Document
     from docx.document import Document as DocumentType
     from docx.text.paragraph import Paragraph
     from docx.table import Table
+    from docx.oxml.ns import qn
 except ImportError:
     print("Error: python-docx is not installed. Please install it using:")
     print("pip install python-docx")
@@ -237,19 +240,77 @@ class WordDocumentConverter(BaseDocumentConverter):
                 if all_bold and has_text and 'heading' not in style_name.lower():
                     self.logger.info(f"Potential bold heading: '{text[:50]}...' (Style: {style_name})")
 
+    def _extract_images_from_word_document(self, doc_path: Path) -> List[Path]:
+        """
+        Extract embedded images from Word document and save them as temporary files.
+
+        Args:
+            doc_path: Path to the Word document
+
+        Returns:
+            List of paths to extracted image files
+        """
+        extracted_images = []
+
+        if not self.extract_images:
+            return extracted_images
+
+        try:
+            # Word documents are ZIP files, extract images from the media folder
+            with zipfile.ZipFile(doc_path, 'r') as docx_zip:
+                # List all files in the ZIP
+                file_list = docx_zip.namelist()
+
+                # Find image files in word/media/ directory
+                image_files = [f for f in file_list if f.startswith('word/media/') and
+                             any(f.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.svg'])]
+
+                if image_files:
+                    # Create temp directory for images
+                    temp_dir = self._create_temp_image_dir()
+
+                    for img_file in image_files:
+                        try:
+                            # Extract image data
+                            img_data = docx_zip.read(img_file)
+
+                            # Create filename from the original path
+                            img_filename = Path(img_file).name
+                            temp_img_path = temp_dir / img_filename
+
+                            # Write image to temp file
+                            with open(temp_img_path, 'wb') as f:
+                                f.write(img_data)
+
+                            extracted_images.append(temp_img_path)
+                            self.logger.info(f"Extracted image: {img_filename}")
+
+                        except Exception as e:
+                            self.logger.warning(f"Failed to extract image {img_file}: {str(e)}")
+
+                self.logger.info(f"Extracted {len(extracted_images)} images from {doc_path.name}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to extract images from {doc_path}: {str(e)}")
+
+        return extracted_images
+
     def _convert_document_to_markdown(self, doc_path: Path) -> str:
         """Convert a Word document to Markdown format."""
         try:
             doc = Document(doc_path)
-            
+
             # Reset section counters for new document
             self._reset_section_counters()
-            
+
             # Analyze document structure for debugging
             self._analyze_document_structure(doc)
-            
+
+            # Extract embedded images first
+            extracted_images = self._extract_images_from_word_document(doc_path)
+
             markdown_content = ""
-            
+
             for element in doc.element.body:
                 if element.tag.endswith('p'):  # Paragraph
                     # Find the corresponding paragraph object
@@ -257,16 +318,25 @@ class WordDocumentConverter(BaseDocumentConverter):
                         if paragraph._element == element:
                             markdown_content += self._convert_paragraph_to_markdown(paragraph)
                             break
-                
+
                 elif element.tag.endswith('tbl'):  # Table
                     # Find the corresponding table object
                     for table in doc.tables:
                         if table._element == element:
                             markdown_content += self._convert_table_to_markdown(table)
                             break
-            
+
+            # Add extracted image content at the end of the document
+            if extracted_images:
+                markdown_content += "\n\n# Embedded Images\n\n"
+                markdown_content += "The following content was extracted from embedded images in the document:\n\n"
+
+                for img_path in extracted_images:
+                    image_markdown = self._convert_image_to_markdown(img_path)
+                    markdown_content += image_markdown
+
             return markdown_content
-            
+
         except Exception as e:
             self.logger.error(f"Error converting Word document {doc_path}: {str(e)}")
             return f"# Error Converting Document\n\nFailed to convert {doc_path.name}: {str(e)}\n"

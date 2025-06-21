@@ -10,6 +10,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import logging
+import tempfile
+import os
 
 
 class BaseDocumentConverter(ABC):
@@ -21,6 +23,10 @@ class BaseDocumentConverter(ABC):
 
         # Setup logging
         self.logger = logging.getLogger(self.__class__.__name__)
+
+        # Image processing settings
+        self.extract_images = True  # Enable image extraction by default
+        self.temp_image_dir = None  # Will be set when needed
     
     @abstractmethod
     def get_supported_extensions(self) -> List[str]:
@@ -90,35 +96,38 @@ class BaseDocumentConverter(ABC):
     def convert_file(self, input_file: Path, output_file: Path) -> bool:
         """
         Convert a single document to Markdown.
-        
+
         Args:
             input_file: Path to the input document
             output_file: Path where the Markdown file should be saved
-            
+
         Returns:
             True if conversion successful, False otherwise
         """
         try:
             self.logger.info(f"Converting: {input_file.name}")
-            
+
             # Check if we can convert this file
             if not self.can_convert(input_file):
                 self.logger.error(f"Cannot convert file type: {input_file.suffix}")
                 return False
-            
+
             # Convert document content
             markdown_content = self._convert_document_to_markdown(input_file)
-            
+
             # Write Markdown file
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(markdown_content)
-            
+
             self.logger.info(f"Successfully converted: {input_file.name} -> {output_file.name}")
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Failed to convert {input_file.name}: {str(e)}")
             return False
+        finally:
+            # Always cleanup temporary images
+            self._cleanup_temp_images()
     
     def get_converter_info(self) -> Dict[str, Any]:
         """
@@ -131,5 +140,69 @@ class BaseDocumentConverter(ABC):
             "name": self.__class__.__name__,
             "supported_extensions": self.get_supported_extensions(),
             "supports_section_numbering": True,
-            "section_numbering_enabled": True
+            "section_numbering_enabled": True,
+            "supports_image_extraction": True
         }
+
+    def _create_temp_image_dir(self) -> Path:
+        """
+        Create a temporary directory for extracted images.
+
+        Returns:
+            Path to the temporary directory
+        """
+        if not self.temp_image_dir:
+            self.temp_image_dir = Path(tempfile.mkdtemp(prefix="doc_images_"))
+            self.logger.info(f"Created temporary image directory: {self.temp_image_dir}")
+        return self.temp_image_dir
+
+    def _cleanup_temp_images(self) -> None:
+        """Clean up temporary image files and directory."""
+        if self.temp_image_dir and self.temp_image_dir.exists():
+            try:
+                # Remove all files in the temp directory
+                for file_path in self.temp_image_dir.iterdir():
+                    if file_path.is_file():
+                        file_path.unlink()
+
+                # Remove the directory
+                self.temp_image_dir.rmdir()
+                self.logger.info(f"Cleaned up temporary image directory: {self.temp_image_dir}")
+                self.temp_image_dir = None
+            except Exception as e:
+                self.logger.warning(f"Failed to cleanup temp images: {str(e)}")
+
+    def _convert_image_to_markdown(self, image_path: Path) -> str:
+        """
+        Convert an extracted image to markdown using the image converter.
+
+        Args:
+            image_path: Path to the image file
+
+        Returns:
+            Markdown content extracted from the image
+        """
+        try:
+            # Import here to avoid circular imports
+            from .image_converter import ImageDocumentConverter
+
+            # Create image converter instance
+            image_converter = ImageDocumentConverter()
+
+            # Check if image converter can handle this file
+            if not image_converter.can_convert(image_path):
+                self.logger.warning(f"Image converter cannot handle file: {image_path}")
+                return f"\n<!-- Image: {image_path.name} (conversion not supported) -->\n"
+
+            # Convert image to markdown
+            image_markdown = image_converter._extract_text_with_ai_vision(image_path)
+
+            # Add a separator and context
+            separator = f"\n<!-- Extracted content from embedded image: {image_path.name} -->\n"
+            separator += "---\n\n"
+
+            return separator + image_markdown + "\n\n---\n"
+
+        except Exception as e:
+            self.logger.error(f"Failed to convert image {image_path}: {str(e)}")
+            return f"\n<!-- Image: {image_path.name} (conversion failed: {str(e)}) -->\n"

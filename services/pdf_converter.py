@@ -269,28 +269,100 @@ class PDFDocumentConverter(BaseDocumentConverter):
             # Add separator row after header
             if i == 0:
                 markdown_table += "| " + " | ".join(["---"] * len(cells)) + " |\n"
-        
+
         return markdown_table + "\n"
-    
+
+    def _extract_images_from_pdf_document(self, doc: fitz.Document) -> List[Path]:
+        """
+        Extract embedded images from PDF document and save them as temporary files.
+
+        Args:
+            doc: PyMuPDF document object
+
+        Returns:
+            List of paths to extracted image files
+        """
+        extracted_images = []
+
+        if not self.extract_images:
+            return extracted_images
+
+        try:
+            # Create temp directory for images
+            temp_dir = None
+
+            for page_num in range(len(doc)):
+                page = doc[page_num]
+
+                # Get list of images on this page
+                image_list = page.get_images()
+
+                for img_index, img in enumerate(image_list):
+                    try:
+                        # Get image xref (reference number)
+                        xref = img[0]
+
+                        # Extract image data
+                        base_image = doc.extract_image(xref)
+                        image_bytes = base_image["image"]
+                        image_ext = base_image["ext"]
+
+                        # Create temp directory if needed
+                        if not temp_dir:
+                            temp_dir = self._create_temp_image_dir()
+
+                        # Create filename
+                        img_filename = f"page_{page_num + 1}_img_{img_index + 1}.{image_ext}"
+                        temp_img_path = temp_dir / img_filename
+
+                        # Write image to temp file
+                        with open(temp_img_path, 'wb') as f:
+                            f.write(image_bytes)
+
+                        extracted_images.append(temp_img_path)
+                        self.logger.info(f"Extracted image: {img_filename} from page {page_num + 1}")
+
+                    except Exception as e:
+                        self.logger.warning(f"Failed to extract image {img_index} from page {page_num + 1}: {str(e)}")
+
+            self.logger.info(f"Extracted {len(extracted_images)} images from PDF document")
+
+        except Exception as e:
+            self.logger.error(f"Failed to extract images from PDF: {str(e)}")
+
+        return extracted_images
+
     def _convert_document_to_markdown(self, doc_path: Path) -> str:
         """Convert a PDF document to Markdown format."""
         try:
             # Reset section counters for new document
             self._reset_section_counters()
-            
+
             self.logger.info(f"Opening PDF document: {doc_path}")
             doc = fitz.open(doc_path)
-            
+
+            # Extract embedded images first
+            extracted_images = self._extract_images_from_pdf_document(doc)
+
             # Extract text with formatting
             text_blocks = self._extract_text_with_formatting(doc)
-            
+
             # Convert to markdown
             markdown_content = self._convert_text_blocks_to_markdown(text_blocks)
-            
+
+            # Add extracted image content at the end of the document
+            if extracted_images:
+                markdown_content += "\n\n# Embedded Images\n\n"
+                markdown_content += "The following content was extracted from embedded images in the document:\n\n"
+
+                for img_path in extracted_images:
+                    image_markdown = self._convert_image_to_markdown(img_path)
+                    markdown_content += image_markdown
+
             doc.close()
-            
+
             return markdown_content
-            
+
         except Exception as e:
             self.logger.error(f"Error converting PDF document {doc_path}: {str(e)}")
             return f"# Error Converting Document\n\nFailed to convert {doc_path.name}: {str(e)}\n"
