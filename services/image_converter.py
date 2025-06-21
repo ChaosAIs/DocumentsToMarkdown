@@ -144,19 +144,17 @@ class ImageDocumentConverter(BaseDocumentConverter):
             if not image_base64:
                 return f"# Error Processing Image\n\nFailed to prepare image: {image_path.name}\n"
             
-            # Create the vision prompt
-            prompt = """Please analyze this image and extract all text content. Format your response as clean Markdown with the following guidelines:
+            # Create the vision prompt - focused on content extraction only
+            prompt = """Extract all text content from this image. Return only the actual content without any explanations or descriptions of formatting styles.
 
-1. Use appropriate heading levels (# ## ###) for titles and section headers
-2. Preserve the original structure and hierarchy of the content
-3. Convert tables to proper Markdown table format
-4. Use bullet points or numbered lists where appropriate
-5. Bold important text using **bold** formatting
-6. Include any captions, labels, or annotations
-7. If the image contains charts or diagrams, describe them briefly
-8. Maintain the logical flow and organization of the content
-
-Focus on accuracy and readability. If text is unclear or partially obscured, indicate this with [unclear] or [partially visible]."""
+Requirements:
+- Extract ALL visible text exactly as written
+- Preserve structure using appropriate Markdown formatting (headers, lists, tables)
+- For diagrams/flowcharts: extract text labels and describe the process flow
+- For tables: format as Markdown tables
+- Read left to right, top to bottom for multi-column content
+- Use [unclear] for illegible text
+- Do not explain what you see - just provide the extracted content"""
 
             # Make API call to OpenAI Vision
             response = self.client.chat.completions.create(

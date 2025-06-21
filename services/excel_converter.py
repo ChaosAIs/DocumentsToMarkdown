@@ -142,8 +142,8 @@ class ExcelDocumentConverter(BaseDocumentConverter):
             markdown_content += "*This worksheet contains no data.*\n\n"
             return markdown_content
         
-        # Convert to markdown table
-        markdown_content += self._create_markdown_table(data)
+        # Convert to markdown table using Azure DevOps compatible format
+        markdown_content += self._create_azure_devops_table(data)
         
         return markdown_content
     
@@ -190,56 +190,10 @@ class ExcelDocumentConverter(BaseDocumentConverter):
                     row.append(str(cell.value))
             data.append(row)
         
-        # Convert to markdown table
-        markdown_content += self._create_markdown_table(data)
+        # Convert to markdown table using Azure DevOps compatible format
+        markdown_content += self._create_azure_devops_table(data)
         
         return markdown_content
     
-    def _create_markdown_table(self, data: List[List[str]]) -> str:
-        """Create a Markdown table from 2D data array."""
-        if not data:
-            return ""
-        
-        # Find the maximum number of columns
-        max_cols = max(len(row) for row in data)
-        
-        # Pad all rows to have the same number of columns
-        for row in data:
-            while len(row) < max_cols:
-                row.append("")
-        
-        # Escape pipe characters in cell content
-        for row in data:
-            for i, cell in enumerate(row):
-                row[i] = str(cell).replace("|", "\\|").replace("\n", " ").replace("\r", "")
-        
-        # Create the table
-        markdown_table = ""
-        
-        # Add header row (first row)
-        if data:
-            markdown_table += "| " + " | ".join(data[0]) + " |\n"
-            # Add separator row
-            markdown_table += "| " + " | ".join(["---"] * max_cols) + " |\n"
-            
-            # Add data rows
-            for row in data[1:]:
-                markdown_table += "| " + " | ".join(row) + " |\n"
-        
-        return markdown_table + "\n"
-    
-    def _sanitize_cell_content(self, content: str) -> str:
-        """Sanitize cell content for Markdown table."""
-        if not content:
-            return ""
-        
-        # Convert to string and handle special characters
-        content = str(content)
-        
-        # Replace problematic characters
-        content = content.replace("|", "\\|")  # Escape pipe characters
-        content = content.replace("\n", " ")   # Replace newlines with spaces
-        content = content.replace("\r", "")    # Remove carriage returns
-        content = content.strip()              # Remove leading/trailing whitespace
-        
-        return content
+
+

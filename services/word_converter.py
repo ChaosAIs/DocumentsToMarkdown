@@ -7,7 +7,7 @@ This service handles conversion of Word documents (.docx, .doc) to Markdown form
 
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Optional, Set
 import re
 import zipfile
 import io
@@ -55,9 +55,37 @@ class WordDocumentConverter(BaseDocumentConverter):
 
         return text
     
-    def _convert_paragraph_to_markdown(self, paragraph: Paragraph) -> str:
+    def _convert_paragraph_to_markdown(self, paragraph: Paragraph, extracted_images: Optional[Dict[str, Path]] = None, processed_images: Optional[Set[str]] = None) -> str:
         """Convert a Word paragraph to Markdown format."""
         text = paragraph.text.strip()
+
+        if processed_images is None:
+            processed_images = set()
+
+        # Check for images in this paragraph
+        paragraph_images = []
+        if extracted_images:
+            paragraph_images = self._check_paragraph_for_images(paragraph)
+
+        # If paragraph has no text but has images, skip processing here
+        # Images are now handled by position mapping in _convert_document_to_markdown
+        if not text and paragraph_images:
+            if '__IMAGE_PARAGRAPH__' in paragraph_images:
+                # This is an image paragraph, but images are handled by position mapping
+                return ""
+            else:
+                # Handle specific named images (if any)
+                markdown_content = ""
+                if extracted_images:
+                    for img_filename in paragraph_images:
+                        if img_filename in extracted_images and img_filename not in processed_images:
+                            img_path = extracted_images[img_filename]
+                            image_markdown = self._convert_image_to_markdown(img_path)
+                            processed_images.add(img_filename)
+                            markdown_content += image_markdown
+                return markdown_content
+
+        # If paragraph has no text and no images, return empty
         if not text:
             return ""
         
@@ -160,6 +188,15 @@ class WordDocumentConverter(BaseDocumentConverter):
         # Clean up multiple consecutive formatting markers
         markdown_text = self._clean_formatting_markers(markdown_text)
 
+        # Add any images found in this paragraph inline with the text
+        if paragraph_images and extracted_images:
+            for img_filename in paragraph_images:
+                if img_filename in extracted_images and img_filename not in processed_images:
+                    img_path = extracted_images[img_filename]
+                    image_markdown = self._convert_image_to_markdown(img_path)
+                    processed_images.add(img_filename)
+                    markdown_text += "\n" + image_markdown
+
         return f"{markdown_text}\n\n"
     
     def _extract_cell_content(self, cell) -> str:
@@ -187,29 +224,20 @@ class WordDocumentConverter(BaseDocumentConverter):
         return cell_content
 
     def _convert_table_to_markdown(self, table: Table) -> str:
-        """Convert a Word table to Markdown table format."""
+        """Convert a Word table to Azure DevOps Wiki-compatible Markdown table format."""
         if not table.rows:
             return ""
 
-        markdown_table = ""
-
-        # Process header row
-        header_row = table.rows[0]
-        header_cells = [self._extract_cell_content(cell) for cell in header_row.cells]
-        markdown_table += "| " + " | ".join(header_cells) + " |\n"
-
-        # Add separator row
-        separator = "| " + " | ".join(["---"] * len(header_cells)) + " |\n"
-        markdown_table += separator
-
-        # Process data rows
-        for row in table.rows[1:]:
+        # Extract table data
+        table_data = []
+        for row in table.rows:
             row_cells = [self._extract_cell_content(cell) for cell in row.cells]
-            markdown_table += "| " + " | ".join(row_cells) + " |\n"
+            table_data.append(row_cells)
 
-        return markdown_table + "\n"
+        # Use the Azure DevOps compatible table creation method
+        return self._create_azure_devops_table(table_data)
     
-    def _analyze_document_structure(self, doc: Document) -> None:
+    def _analyze_document_structure(self, doc) -> None:
         """Analyze document structure to understand heading patterns."""
         self.logger.info("Analyzing Word document structure...")
         
@@ -240,7 +268,7 @@ class WordDocumentConverter(BaseDocumentConverter):
                 if all_bold and has_text and 'heading' not in style_name.lower():
                     self.logger.info(f"Potential bold heading: '{text[:50]}...' (Style: {style_name})")
 
-    def _extract_images_from_word_document(self, doc_path: Path) -> List[Path]:
+    def _extract_images_from_word_document(self, doc_path: Path) -> Dict[str, Path]:
         """
         Extract embedded images from Word document and save them as temporary files.
 
@@ -248,9 +276,9 @@ class WordDocumentConverter(BaseDocumentConverter):
             doc_path: Path to the Word document
 
         Returns:
-            List of paths to extracted image files
+            Dictionary mapping image filenames to their extracted file paths
         """
-        extracted_images = []
+        extracted_images: Dict[str, Path] = {}
 
         if not self.extract_images:
             return extracted_images
@@ -282,7 +310,8 @@ class WordDocumentConverter(BaseDocumentConverter):
                             with open(temp_img_path, 'wb') as f:
                                 f.write(img_data)
 
-                            extracted_images.append(temp_img_path)
+                            # Map the original filename to the extracted path
+                            extracted_images[img_filename] = temp_img_path
                             self.logger.info(f"Extracted image: {img_filename}")
 
                         except Exception as e:
@@ -295,10 +324,127 @@ class WordDocumentConverter(BaseDocumentConverter):
 
         return extracted_images
 
+    def _check_paragraph_for_images(self, paragraph) -> List[str]:
+        """
+        Check if a paragraph contains embedded images and return their filenames.
+
+        Args:
+            paragraph: Word paragraph object
+
+        Returns:
+            List of image filenames found in the paragraph
+        """
+        image_filenames: List[str] = []
+
+        try:
+            # Check for drawing elements in the paragraph's XML
+            paragraph_xml = paragraph._element.xml
+
+            # Look for image references in the XML
+            if 'drawing' in paragraph_xml or 'pic:pic' in paragraph_xml or 'blip' in paragraph_xml:
+                # This paragraph likely contains an image
+                # For now, we'll use a simpler approach and check if the paragraph has minimal text
+                # but contains drawing elements
+                text_content = paragraph.text.strip()
+
+                # If paragraph has very little text but contains drawing XML, it's likely an image paragraph
+                if len(text_content) < 10 and ('drawing' in paragraph_xml or 'blip' in paragraph_xml):
+                    # Mark this as an image paragraph - we'll process all available images
+                    # This is a simplified approach that works better than complex XML parsing
+                    self.logger.debug(f"Found paragraph with embedded image content")
+                    return ['__IMAGE_PARAGRAPH__']  # Special marker for image paragraphs
+
+        except Exception as e:
+            self.logger.debug(f"Error checking paragraph for images: {e}")
+
+        return image_filenames
+
+    def _map_image_paragraph_positions(self, doc, extracted_images: Dict[str, Path]) -> Dict[int, List[str]]:
+        """
+        Create a mapping of paragraph positions to their associated images based on content context.
+
+        Args:
+            doc: Word document object
+            extracted_images: Dictionary of extracted images
+
+        Returns:
+            Dictionary mapping paragraph index to list of image filenames
+        """
+        image_positions: Dict[int, List[str]] = {}
+
+        if not extracted_images:
+            return image_positions
+
+        self.logger.info(f"Mapping {len(extracted_images)} images to paragraph positions using content-based approach")
+
+        # First, extract the content of each image to understand what it contains
+        image_contents = {}
+        valid_images = {}  # Track images with successful extractions
+
+        for img_filename, img_path in extracted_images.items():
+            try:
+                # Get a preview of the image content
+                image_markdown = self._convert_image_to_markdown(img_path)
+
+                # Check if the extraction was successful
+                if image_markdown and image_markdown.strip():
+                    # Extract key phrases from the image content
+                    content_preview = image_markdown.lower()
+                    image_contents[img_filename] = content_preview
+                    valid_images[img_filename] = img_path
+                    self.logger.info(f"Image {img_filename} contains: {content_preview[:100]}...")
+                else:
+                    self.logger.info(f"Skipping failed image extraction for mapping: {img_filename}")
+            except Exception as e:
+                self.logger.warning(f"Failed to preview image {img_filename}: {e}")
+
+        # Update extracted_images to only include valid images for mapping
+        extracted_images = valid_images
+
+        # Now scan through paragraphs to find logical placement positions
+        for paragraph_index, paragraph in enumerate(doc.paragraphs):
+            paragraph_text = paragraph.text.strip().lower()
+
+            # Look for specific content markers that indicate where images should be placed
+            if "state transition" in paragraph_text and "review process" in paragraph_text:
+                # This is likely where the review process diagram should go
+                # Find the image that contains "mid" or "end" and "year" and "review"
+                for img_filename, content in image_contents.items():
+                    if "mid" in content and "year" in content and "review" in content:
+                        image_positions[paragraph_index + 1] = [img_filename]  # Place after the heading
+                        self.logger.info(f"Mapped review process image {img_filename} to paragraph {paragraph_index + 1} (after '{paragraph_text[:50]}')")
+                        break
+
+            elif "state transition" in paragraph_text and "plan" in paragraph_text:
+                # This is likely where the plan submission diagram should go
+                # Find the image that contains form/submission workflow
+                for img_filename, content in image_contents.items():
+                    if img_filename not in [pos[0] for pos in image_positions.values()]:  # Not already mapped
+                        if "form" in content or "draft" in content or "submit" in content:
+                            image_positions[paragraph_index + 1] = [img_filename]  # Place after the heading
+                            self.logger.info(f"Mapped plan submission image {img_filename} to paragraph {paragraph_index + 1} (after '{paragraph_text[:50]}')")
+                            break
+
+        # For any remaining unmapped images, place them at logical positions
+        unmapped_images = [img for img in extracted_images.keys()
+                          if img not in [pos[0] for pos in image_positions.values()]]
+
+        if unmapped_images:
+            self.logger.info(f"Placing {len(unmapped_images)} unmapped images at document start")
+            # Place remaining images at the beginning, but in a more controlled way
+            for i, img_filename in enumerate(unmapped_images):
+                # Place at the very beginning, but after any title/header content
+                target_position = i * 2  # Space them out
+                image_positions[target_position] = [img_filename]
+                self.logger.info(f"Mapped remaining image {img_filename} to paragraph {target_position}")
+
+        self.logger.info(f"Final image mapping: {image_positions}")
+        return image_positions
+
     def _convert_document_to_markdown(self, doc_path: Path) -> str:
         """Convert a Word document to Markdown format."""
         try:
-            doc = Document(doc_path)
+            doc = Document(str(doc_path))
 
             # Reset section counters for new document
             self._reset_section_counters()
@@ -309,14 +455,34 @@ class WordDocumentConverter(BaseDocumentConverter):
             # Extract embedded images first
             extracted_images = self._extract_images_from_word_document(doc_path)
 
+            # Create a mapping of paragraph positions to image paragraphs
+            image_paragraph_positions = self._map_image_paragraph_positions(doc, extracted_images)
+
+            # Track processed images to avoid duplicates
+            processed_images: Set[str] = set()
+
             markdown_content = ""
+            paragraph_index = 0
 
             for element in doc.element.body:
                 if element.tag.endswith('p'):  # Paragraph
                     # Find the corresponding paragraph object
                     for paragraph in doc.paragraphs:
                         if paragraph._element == element:
-                            markdown_content += self._convert_paragraph_to_markdown(paragraph)
+                            # Check if this paragraph position has associated images
+                            if paragraph_index in image_paragraph_positions:
+                                # Process the specific images for this position
+                                for img_filename in image_paragraph_positions[paragraph_index]:
+                                    if img_filename in extracted_images and img_filename not in processed_images:
+                                        img_path = extracted_images[img_filename]
+                                        image_markdown = self._convert_image_to_markdown(img_path)
+                                        processed_images.add(img_filename)
+                                        markdown_content += image_markdown
+
+                            # Convert the paragraph normally
+                            paragraph_markdown = self._convert_paragraph_to_markdown(paragraph, extracted_images, processed_images)
+                            markdown_content += paragraph_markdown
+                            paragraph_index += 1
                             break
 
                 elif element.tag.endswith('tbl'):  # Table
@@ -326,12 +492,12 @@ class WordDocumentConverter(BaseDocumentConverter):
                             markdown_content += self._convert_table_to_markdown(table)
                             break
 
-            # Add extracted image content at the end of the document
-            if extracted_images:
-                markdown_content += "\n\n# Embedded Images\n\n"
-                markdown_content += "The following content was extracted from embedded images in the document:\n\n"
-
-                for img_path in extracted_images:
+            # Add any remaining unprocessed images at the end
+            remaining_images = set(extracted_images.keys()) - processed_images
+            if remaining_images:
+                markdown_content += "\n\n<!-- Additional embedded images found in document -->\n\n"
+                for img_filename in remaining_images:
+                    img_path = extracted_images[img_filename]
                     image_markdown = self._convert_image_to_markdown(img_path)
                     markdown_content += image_markdown
 

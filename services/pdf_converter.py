@@ -8,7 +8,7 @@ Uses PyMuPDF (fitz) for PDF text extraction and processing.
 
 import sys
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import re
 
 try:
@@ -176,21 +176,33 @@ class PDFDocumentConverter(BaseDocumentConverter):
         
         return text_blocks
     
-    def _convert_text_blocks_to_markdown(self, text_blocks: List[Dict[str, Any]]) -> str:
+    def _convert_text_blocks_to_markdown(self, text_blocks: List[Dict[str, Any]], page_images: Optional[Dict[int, List[Dict[str, Any]]]] = None) -> str:
         """
         Convert extracted text blocks to Markdown format.
-        
+
         Args:
             text_blocks: List of text blocks with formatting information
-            
+            page_images: Dictionary mapping page numbers to image info lists
+
         Returns:
             Markdown content as string
         """
         markdown_content = ""
-        
+        current_page = 0
+
         for block in text_blocks:
             text = block['text']
-            
+            block_page = block.get('page', 1)
+
+            # If we've moved to a new page, insert any images from the previous page
+            if page_images and block_page > current_page:
+                for page_num in range(current_page, block_page):
+                    if page_num in page_images and page_images[page_num]:
+                        for image_info in page_images[page_num]:
+                            image_markdown = self._convert_image_to_markdown(image_info['path'])
+                            markdown_content += image_markdown
+                current_page = block_page
+
             if block['is_heading']:
                 # Convert to markdown heading
                 heading_level = block['heading_level']
@@ -211,7 +223,15 @@ class PDFDocumentConverter(BaseDocumentConverter):
                             text = f"**{text}**"
 
                     markdown_content += f"{text}\n\n"
-        
+
+        # Add any remaining images from the last page
+        if page_images:
+            for page_num in range(current_page, len(page_images)):
+                if page_num in page_images and page_images[page_num]:
+                    for image_info in page_images[page_num]:
+                        image_markdown = self._convert_image_to_markdown(image_info['path'])
+                        markdown_content += image_markdown
+
         return markdown_content
     
     def _looks_like_table(self, text: str) -> bool:
@@ -238,41 +258,38 @@ class PDFDocumentConverter(BaseDocumentConverter):
     
     def _convert_table_like_text(self, text: str) -> str:
         """
-        Convert table-like text to Markdown table format.
-        
+        Convert table-like text to Azure DevOps Wiki-compatible Markdown table format.
+
         Args:
             text: Table-like text
-            
+
         Returns:
             Markdown table format
         """
         lines = [line.strip() for line in text.split('\n') if line.strip()]
         if not lines:
             return text + "\n\n"
-        
+
         # Try to detect separator
         separator = None
         for sep in ['\t', ' | ', '|', '  ']:
             if sep in lines[0]:
                 separator = sep
                 break
-        
+
         if not separator:
             return text + "\n\n"
-        
-        # Convert to markdown table
-        markdown_table = ""
-        for i, line in enumerate(lines):
+
+        # Extract table data
+        table_data = []
+        for line in lines:
             cells = [cell.strip() for cell in line.split(separator)]
-            markdown_table += "| " + " | ".join(cells) + " |\n"
-            
-            # Add separator row after header
-            if i == 0:
-                markdown_table += "| " + " | ".join(["---"] * len(cells)) + " |\n"
+            table_data.append(cells)
 
-        return markdown_table + "\n"
+        # Use the Azure DevOps compatible table creation method
+        return self._create_azure_devops_table(table_data)
 
-    def _extract_images_from_pdf_document(self, doc: fitz.Document) -> List[Path]:
+    def _extract_images_from_pdf_document(self, doc: fitz.Document) -> Dict[int, List[Dict[str, Any]]]:
         """
         Extract embedded images from PDF document and save them as temporary files.
 
@@ -280,12 +297,12 @@ class PDFDocumentConverter(BaseDocumentConverter):
             doc: PyMuPDF document object
 
         Returns:
-            List of paths to extracted image files
+            Dictionary mapping page numbers to lists of image info dictionaries
         """
-        extracted_images = []
+        page_images: Dict[int, List[Dict[str, Any]]] = {}
 
         if not self.extract_images:
-            return extracted_images
+            return page_images
 
         try:
             # Create temp directory for images
@@ -293,6 +310,7 @@ class PDFDocumentConverter(BaseDocumentConverter):
 
             for page_num in range(len(doc)):
                 page = doc[page_num]
+                page_images[page_num] = []
 
                 # Get list of images on this page
                 image_list = page.get_images()
@@ -319,18 +337,27 @@ class PDFDocumentConverter(BaseDocumentConverter):
                         with open(temp_img_path, 'wb') as f:
                             f.write(image_bytes)
 
-                        extracted_images.append(temp_img_path)
+                        # Store image info with position
+                        image_info = {
+                            'path': temp_img_path,
+                            'filename': img_filename,
+                            'bbox': img[1:5] if len(img) > 4 else None,  # Bounding box if available
+                            'page': page_num + 1
+                        }
+                        page_images[page_num].append(image_info)
+
                         self.logger.info(f"Extracted image: {img_filename} from page {page_num + 1}")
 
                     except Exception as e:
                         self.logger.warning(f"Failed to extract image {img_index} from page {page_num + 1}: {str(e)}")
 
-            self.logger.info(f"Extracted {len(extracted_images)} images from PDF document")
+            total_images = sum(len(images) for images in page_images.values())
+            self.logger.info(f"Extracted {total_images} images from PDF document")
 
         except Exception as e:
             self.logger.error(f"Failed to extract images from PDF: {str(e)}")
 
-        return extracted_images
+        return page_images
 
     def _convert_document_to_markdown(self, doc_path: Path) -> str:
         """Convert a PDF document to Markdown format."""
@@ -341,23 +368,14 @@ class PDFDocumentConverter(BaseDocumentConverter):
             self.logger.info(f"Opening PDF document: {doc_path}")
             doc = fitz.open(doc_path)
 
-            # Extract embedded images first
-            extracted_images = self._extract_images_from_pdf_document(doc)
+            # Extract embedded images first (organized by page)
+            page_images = self._extract_images_from_pdf_document(doc)
 
             # Extract text with formatting
             text_blocks = self._extract_text_with_formatting(doc)
 
-            # Convert to markdown
-            markdown_content = self._convert_text_blocks_to_markdown(text_blocks)
-
-            # Add extracted image content at the end of the document
-            if extracted_images:
-                markdown_content += "\n\n# Embedded Images\n\n"
-                markdown_content += "The following content was extracted from embedded images in the document:\n\n"
-
-                for img_path in extracted_images:
-                    image_markdown = self._convert_image_to_markdown(img_path)
-                    markdown_content += image_markdown
+            # Convert to markdown with inline images
+            markdown_content = self._convert_text_blocks_to_markdown(text_blocks, page_images)
 
             doc.close()
 

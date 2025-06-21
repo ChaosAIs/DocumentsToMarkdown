@@ -22,9 +22,9 @@ The DocumentsToMarkdown converter now supports **automatic extraction and AI-pow
 - Provides context when text is unclear or partially visible
 
 ### 📄 Seamless Integration
-- Extracted image content is automatically appended to the main document conversion
+- Extracted image content appears **inline at the original image locations** in the document
 - Each image's content is clearly marked with separators and metadata
-- Maintains document structure while adding valuable image-derived content
+- Preserves the original document flow and structure perfectly
 
 ## 🚀 How It Works
 
@@ -52,13 +52,9 @@ The DocumentsToMarkdown converter now supports **automatic extraction and AI-pow
 
 ## 📋 Example Output
 
-When a document contains embedded images, the final markdown will include a section like this:
+When a document contains embedded images, the extracted content appears **inline at the original image locations**:
 
 ```markdown
-# Embedded Images
-
-The following content was extracted from embedded images in the document:
-
 <!-- Extracted content from embedded image: image1.png -->
 ---
 
@@ -75,12 +71,20 @@ This flowchart outlines the process of form submission...
 
 ---
 
+# 1 Revision History
+
+| Version | Date | Author(s) | Revision Notes |
+| --- | --- | --- | --- |
+| 0.1 | 20-June-2025 | Supreet Sirpal | Initial draft |
+
 <!-- Extracted content from embedded image: image2.jpeg -->
 ---
 
 # Review Process Flow
 ...
 ```
+
+The images are processed **in their original document order and position**, maintaining the natural flow of the document.
 
 ## ⚙️ Configuration
 

@@ -92,6 +92,85 @@ class BaseDocumentConverter(ABC):
                 section_parts.append(str(self.section_counters[i]))
 
         return ".".join(section_parts) + " " if section_parts else ""
+
+    def _create_azure_devops_table(self, data: List[List[str]]) -> str:
+        """Create an Azure DevOps Wiki-compatible Markdown table from 2D data array."""
+        if not data:
+            return ""
+
+        # Remove completely empty rows
+        filtered_data = []
+        for row in data:
+            if any(str(cell).strip() for cell in row):  # Keep row if any cell has content
+                filtered_data.append(row)
+
+        if not filtered_data:
+            return ""
+
+        # Find the maximum number of columns
+        max_cols = max(len(row) for row in filtered_data)
+
+        # Pad all rows to have the same number of columns
+        for row in filtered_data:
+            while len(row) < max_cols:
+                row.append("")
+
+        # Sanitize cell content for Azure DevOps Wiki
+        for row in filtered_data:
+            for i, cell in enumerate(row):
+                row[i] = self._sanitize_cell_for_azure_devops(str(cell))
+
+        # Create the table with Azure DevOps Wiki formatting
+        markdown_table = ""
+
+        # Add header row (first row)
+        if filtered_data:
+            markdown_table += "| " + " | ".join(filtered_data[0]) + " |\n"
+            # Add separator row with proper Azure DevOps formatting
+            separators = []
+            for _ in range(max_cols):
+                separators.append("-" * 8)  # Use longer separators for better compatibility
+            markdown_table += "|" + "|".join(separators) + "|\n"
+
+            # Add data rows
+            for row in filtered_data[1:]:
+                markdown_table += "| " + " | ".join(row) + " |\n"
+
+        return markdown_table + "\n"
+
+    def _sanitize_cell_for_azure_devops(self, content: str) -> str:
+        """Sanitize cell content for Azure DevOps Wiki Markdown table."""
+        if not content:
+            return ""
+
+        # Convert to string and handle special characters
+        content = str(content).strip()
+
+        # Replace problematic characters for Azure DevOps Wiki
+        content = content.replace("|", "&#124;")  # Use HTML entity for pipe characters
+        content = content.replace("\n", " ")      # Replace newlines with spaces
+        content = content.replace("\r", "")       # Remove carriage returns
+        content = content.replace("\t", " ")      # Replace tabs with spaces
+
+        # Clean up multiple consecutive spaces
+        content = " ".join(content.split())
+
+        # Handle special markdown characters that might break tables
+        content = content.replace("*", "&#42;")   # Escape asterisks
+        content = content.replace("_", "&#95;")   # Escape underscores
+        content = content.replace("`", "&#96;")   # Escape backticks
+
+        return content
+
+    def _create_azure_devops_mermaid(self, diagram_definition: str, title: str = "") -> str:
+        """Create an Azure DevOps Wiki-compatible Mermaid diagram."""
+        # Azure DevOps Wiki supports Mermaid with ::: mermaid syntax
+        mermaid_block = f":::mermaid\n{diagram_definition.strip()}\n:::\n"
+
+        if title:
+            return f"\n### {title}\n\n{mermaid_block}\n"
+        else:
+            return f"\n{mermaid_block}\n"
     
     def convert_file(self, input_file: Path, output_file: Path) -> bool:
         """
@@ -180,7 +259,7 @@ class BaseDocumentConverter(ABC):
             image_path: Path to the image file
 
         Returns:
-            Markdown content extracted from the image
+            Markdown content extracted from the image, or empty string if extraction failed
         """
         try:
             # Import here to avoid circular imports
@@ -192,17 +271,72 @@ class BaseDocumentConverter(ABC):
             # Check if image converter can handle this file
             if not image_converter.can_convert(image_path):
                 self.logger.warning(f"Image converter cannot handle file: {image_path}")
-                return f"\n<!-- Image: {image_path.name} (conversion not supported) -->\n"
+                return ""  # Return empty string instead of error comment
 
             # Convert image to markdown
             image_markdown = image_converter._extract_text_with_ai_vision(image_path)
 
-            # Add a separator and context
-            separator = f"\n<!-- Extracted content from embedded image: {image_path.name} -->\n"
-            separator += "---\n\n"
+            # Check if extraction was successful
+            if self._is_failed_image_extraction(image_markdown, image_path.name):
+                self.logger.info(f"Skipping failed image extraction for: {image_path.name}")
+                return ""  # Return empty string for failed extractions
 
-            return separator + image_markdown + "\n\n---\n"
+            # Add minimal context comment and place content inline
+            context_comment = f"\n<!-- Content extracted from image: {image_path.name} -->\n"
+
+            return context_comment + image_markdown + "\n"
 
         except Exception as e:
             self.logger.error(f"Failed to convert image {image_path}: {str(e)}")
-            return f"\n<!-- Image: {image_path.name} (conversion failed: {str(e)}) -->\n"
+            return ""  # Return empty string instead of error comment
+
+    def _is_failed_image_extraction(self, content: str, filename: str) -> bool:
+        """
+        Check if image extraction failed or returned unusable content.
+
+        Args:
+            content: Extracted content from image
+            filename: Name of the image file
+
+        Returns:
+            True if extraction failed or content is unusable
+        """
+        if not content or not content.strip():
+            return True
+
+        # Convert to lowercase for case-insensitive checking
+        content_lower = content.lower().strip()
+
+        # List of phrases that indicate failed extraction
+        failed_indicators = [
+            "[unclear]",
+            "i'm unable to extract text",
+            "i'm sorry, i can't assist",
+            "no text content could be extracted",
+            "failed to extract text",
+            "error extracting text",
+            "error processing image",
+            "i cannot read",
+            "i can't read",
+            "unable to read",
+            "cannot extract",
+            "no readable text",
+            "image appears to be",
+            "this image contains",
+            "i don't see any text",
+            "there is no text",
+            "no visible text"
+        ]
+
+        # Check if content is only failed indicators
+        for indicator in failed_indicators:
+            if indicator in content_lower:
+                # If the content is mostly just the failed indicator, consider it failed
+                if len(content_lower.replace(indicator, "").strip()) < 10:
+                    return True
+
+        # Check if content is too short to be meaningful (less than 5 characters)
+        if len(content.strip()) < 5:
+            return True
+
+        return False
