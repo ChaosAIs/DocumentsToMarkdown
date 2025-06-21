@@ -7,11 +7,13 @@ A modular Python application that converts various document types to Markdown fo
 - **Word Documents**: `.docx`, `.doc`
 - **PDF Documents**: `.pdf`
 - **Excel Spreadsheets**: `.xlsx`, `.xlsm`, `.xlsb`, `.xls`
+- **Image Files**: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tiff`, `.tif`, `.webp` (using AI vision)
 
 ## Features
 
 ### Core Features
-- **Multi-format support**: Word, PDF, and Excel documents
+- **Multi-format support**: Word, PDF, Excel, and Image documents
+- **AI-powered image conversion**: Extract text from images using OpenAI GPT-4 Vision
 - **Automatic section numbering**: Hierarchical numbering (1, 1.1, 1.2, etc.)
 - **Modular architecture**: Pluggable converter system
 - **Batch processing**: Convert multiple documents at once
@@ -40,13 +42,23 @@ A modular Python application that converts various document types to Markdown fo
 pip install -r requirements.txt
 ```
 
+3. **Setup AI Vision (for image conversion)**:
+   - Copy `.env.template` to `.env`
+   - Get an OpenAI API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+   - Add your API key to the `.env` file:
+   ```bash
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
+
 ### Dependencies
 - `python-docx`: For Word document processing
 - `PyMuPDF`: For PDF document processing and text extraction
 - `openpyxl`: For Excel document processing (.xlsx, .xlsm, .xlsb)
 - `xlrd`: For legacy Excel document processing (.xls)
-- `openpyxl`: For Excel document processing (.xlsx, .xlsm, .xlsb)
-- `xlrd`: For legacy Excel document processing (.xls)
+- `python-dotenv`: For environment variable management
+- `openai`: For AI-powered image text extraction
+- `Pillow`: For image processing and optimization
+- `requests`: For HTTP requests to AI services
 
 ## Usage
 
@@ -54,7 +66,7 @@ pip install -r requirements.txt
 
 1. **Setup folders**: The application will automatically create `input` and `output` folders if they don't exist.
 
-2. **Add documents**: Place your documents (Word, PDF, or Excel files) in the `input` folder.
+2. **Add documents**: Place your documents (Word, PDF, Excel, or Image files) in the `input` folder.
 
 3. **Run the converter**:
 
@@ -94,6 +106,7 @@ DocumentsToMarkdown/
 │   ├── word_converter.py         # Word document converter
 │   ├── pdf_converter.py          # PDF document converter
 │   ├── excel_converter.py        # Excel document converter
+│   ├── image_converter.py        # Image document converter (AI vision)
 │   └── document_converter_manager.py  # Main orchestrator
 ├── input/                        # Place documents here
 └── output/                       # Converted Markdown files appear here
@@ -107,6 +120,7 @@ The v2.0 converter uses a modular architecture:
 - **WordDocumentConverter**: Handles Word document conversion with advanced formatting detection
 - **PDFDocumentConverter**: Handles PDF conversion with font-based heading detection
 - **ExcelDocumentConverter**: Handles Excel spreadsheet conversion with table formatting
+- **ImageDocumentConverter**: Handles image conversion using AI vision capabilities
 - **DocumentConverterManager**: Orchestrates multiple converters and provides unified interface
 
 This design makes it easy to add new document formats by creating new converter classes.
@@ -131,6 +145,13 @@ Word tables are converted to Markdown table format with proper headers and align
 - **Table formatting**: Spreadsheet data converted to Markdown tables
 - **Data type preservation**: Numbers, text, dates, and formulas handled appropriately
 - **Format compatibility**: Supports modern (.xlsx, .xlsm, .xlsb) and legacy (.xls) formats
+
+### Image Documents (AI Vision)
+- **AI-powered text extraction**: Uses OpenAI GPT-4 Vision to extract text from images
+- **Multiple image formats**: Supports JPG, PNG, GIF, BMP, TIFF, WebP
+- **Smart formatting**: Preserves document structure, headings, and tables
+- **Image optimization**: Automatic resizing and compression for API efficiency
+- **Intelligent content analysis**: Describes charts, diagrams, and visual elements
 
 ### Error Handling
 - Graceful handling of corrupted or unsupported files

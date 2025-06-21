@@ -16,6 +16,7 @@ try:
     from services.document_converter_manager import DocumentConverterManager
     from services.word_converter import WordDocumentConverter
     from services.pdf_converter import PDFDocumentConverter
+    from services.image_converter import ImageDocumentConverter
     print("✅ Successfully imported all converter modules")
 except ImportError as e:
     print(f"❌ Error importing converter modules: {e}")
@@ -179,6 +180,63 @@ def example_with_custom_settings():
         print(f"   📄 {file_path.name} -> {converter_name}")
 
 
+def example_image_conversion():
+    """Example of image-to-markdown conversion using AI vision."""
+    print("\n" + "="*60)
+    print("EXAMPLE 6: Image to Markdown Conversion (AI Vision)")
+    print("="*60)
+
+    try:
+        # Check if environment is configured for image conversion
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key or api_key == 'your_openai_api_key_here':
+            print("⚠️  OpenAI API key not configured")
+            print("   1. Copy .env.template to .env")
+            print("   2. Add your OpenAI API key to the .env file")
+            print("   3. Get API key from: https://platform.openai.com/api-keys")
+            return
+
+        # Initialize image converter directly
+        image_converter = ImageDocumentConverter()
+
+        print("Image converter information:")
+        info = image_converter.get_converter_info()
+        print(f"  🖼️  Name: {info['name']}")
+        print(f"  📝 Description: {info['description']}")
+        print(f"  📋 Supported formats: {info['supported_extensions']}")
+
+        # Check for image files in input folder
+        from pathlib import Path
+        input_folder = Path("input")
+        if input_folder.exists():
+            image_files = []
+            for ext in image_converter.get_supported_extensions():
+                image_files.extend(input_folder.glob(f"*{ext}"))
+
+            if image_files:
+                print(f"\n🖼️  Found {len(image_files)} image file(s):")
+                for img_file in image_files:
+                    print(f"   - {img_file.name}")
+
+                print("\n💡 To convert these images:")
+                print("   Run: python document_converter_v2.py")
+            else:
+                print("\n📁 No image files found in input folder")
+                print("   Add some image files (.jpg, .png, etc.) to test conversion")
+        else:
+            print("\n📁 Input folder not found")
+
+        print("\n✅ Image conversion example completed!")
+
+    except Exception as e:
+        print(f"❌ Error in image conversion example: {e}")
+        print("   Make sure all dependencies are installed: pip install -r requirements.txt")
+
+
 def main():
     """Main function demonstrating various usage examples."""
     print("🚀 Modular Document Converter - Usage Examples")
@@ -191,18 +249,21 @@ def main():
         example_converter_info()
         example_custom_converter()
         example_with_custom_settings()
+        example_image_conversion()
         
         print("\n" + "="*60)
         print("✅ ALL EXAMPLES COMPLETED SUCCESSFULLY!")
         print("="*60)
         
         print("\n💡 Quick Start Guide:")
-        print("1. Place your documents (.docx, .doc, .pdf) in the 'input' folder")
-        print("2. Run: python example_usage.py")
-        print("3. Check the 'output' folder for converted Markdown files")
+        print("1. Place your documents (.docx, .doc, .pdf, .jpg, .png, etc.) in the 'input' folder")
+        print("2. For image conversion: Configure OpenAI API key in .env file")
+        print("3. Run: python example_usage.py")
+        print("4. Check the 'output' folder for converted Markdown files")
         print("\n📚 For more advanced usage, see the individual converter classes:")
         print("   - services/word_converter.py")
         print("   - services/pdf_converter.py")
+        print("   - services/image_converter.py")
         print("   - services/document_converter_manager.py")
         
     except Exception as e:

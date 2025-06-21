@@ -14,6 +14,7 @@ from .base_converter import BaseDocumentConverter
 from .word_converter import WordDocumentConverter
 from .pdf_converter import PDFDocumentConverter
 from .excel_converter import ExcelDocumentConverter
+from .image_converter import ImageDocumentConverter
 
 
 class DocumentConverterManager:
@@ -43,7 +44,8 @@ class DocumentConverterManager:
         self.converters: List[BaseDocumentConverter] = [
             WordDocumentConverter(),
             PDFDocumentConverter(),
-            ExcelDocumentConverter()
+            ExcelDocumentConverter(),
+            ImageDocumentConverter()
         ]
         
         # Create folders if they don't exist
