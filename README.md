@@ -7,14 +7,16 @@ A powerful, modular Python application that converts various document types to M
 - **Word Documents**: `.docx`, `.doc`
 - **PDF Documents**: `.pdf`
 - **Excel Spreadsheets**: `.xlsx`, `.xlsm`, `.xlsb`, `.xls`
+- **Plain Text Files**: `.txt`, `.csv`, `.tsv`, `.log`, `.md`, `.text` (with AI-enhanced processing)
 - **Image Files**: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tiff`, `.tif`, `.webp` (using AI vision)
 
 ## Features
 
 ### Core Features
-- **Multi-format support**: Word, PDF, Excel, and Image documents
-- **Multiple AI services**: Choose between OpenAI (cloud) and OLLAMA (local) for image processing
+- **Multi-format support**: Word, PDF, Excel, Plain Text, and Image documents
+- **Multiple AI services**: Choose between OpenAI (cloud) and OLLAMA (local) for enhanced processing
 - **AI-powered image conversion**: Extract text from images using advanced AI vision capabilities
+- **AI-enhanced text processing**: Intelligent structure analysis and formatting for plain text files
 - **Embedded image extraction**: Automatically extracts and processes images within Word and PDF documents
 - **Privacy-focused options**: Use local AI (OLLAMA) to keep your data completely private
 - **Automatic section numbering**: Hierarchical numbering (1, 1.1, 1.2, etc.)
@@ -28,6 +30,16 @@ A powerful, modular Python application that converts various document types to M
 - Tables with proper Markdown formatting
 - Paragraphs and line breaks
 - Font-based heading detection (PDF)
+
+### AI-Enhanced Plain Text Processing
+- **Smart CSV/TSV conversion**: Automatically converts CSV and TSV files to properly formatted Markdown tables
+- **AI-powered text analysis**: Uses AI services to improve text structure, readability, and formatting
+- **Intelligent content chunking**: Handles large text files by splitting them into manageable chunks for AI processing
+- **Token-aware processing**: Automatically estimates content size and applies chunking when needed to stay within AI model limits
+- **Fallback processing**: Provides basic text-to-markdown conversion when AI services are unavailable
+- **Multiple text formats**: Supports `.txt`, `.csv`, `.tsv`, `.log`, `.md`, `.text` files
+- **Structure preservation**: Maintains original content hierarchy while improving markdown formatting
+- **Batch text processing**: Efficiently processes multiple text files with consistent formatting
 
 ### AI-Powered Image Processing
 - **Multiple AI service options**: Choose between cloud (OpenAI) and local (OLLAMA) AI services
@@ -185,7 +197,9 @@ DocumentsToMarkdown/
 │   ├── word_converter.py         # Word document converter with image extraction
 │   ├── pdf_converter.py          # PDF document converter with image extraction
 │   ├── excel_converter.py        # Excel document converter
+│   ├── plain_text_converter.py   # Plain text converter with AI enhancement
 │   ├── image_converter.py        # Image document converter (AI vision)
+│   ├── text_chunking_utils.py    # Text chunking utilities for large content
 │   ├── document_converter_manager.py  # Main orchestrator
 │   └── ai_services/              # AI service abstraction layer
 │       ├── __init__.py
@@ -212,6 +226,7 @@ The v2.0 converter uses a modular architecture:
 - **WordDocumentConverter**: Handles Word document conversion with advanced formatting detection
 - **PDFDocumentConverter**: Handles PDF conversion with font-based heading detection
 - **ExcelDocumentConverter**: Handles Excel spreadsheet conversion with table formatting
+- **PlainTextConverter**: Handles plain text and CSV conversion with AI-enhanced processing
 - **ImageDocumentConverter**: Handles image conversion using pluggable AI vision services
 - **DocumentConverterManager**: Orchestrates multiple converters and provides unified interface
 
@@ -331,6 +346,17 @@ Word tables are converted to Markdown table format with proper headers and align
 - **Data type preservation**: Numbers, text, dates, and formulas handled appropriately
 - **Format compatibility**: Supports modern (.xlsx, .xlsm, .xlsb) and legacy (.xls) formats
 
+### Plain Text Files & CSV Processing (AI-Enhanced)
+- **CSV/TSV to Markdown tables**: Automatically converts CSV and TSV files to properly formatted tables with headers and alignment
+- **AI-powered text analysis**: Uses OpenAI or OLLAMA to intelligently structure plain text content
+- **Smart content chunking**: Handles large files by splitting content into manageable chunks for AI processing
+- **Token estimation**: Automatically calculates content size and applies chunking when needed to stay within AI model limits
+- **Intelligent formatting**: AI analyzes content to identify headings, lists, sections, and applies appropriate Markdown formatting
+- **Structure preservation**: Maintains original content hierarchy while improving readability
+- **Fallback processing**: Provides basic text-to-markdown conversion when AI services are unavailable
+- **Multiple formats**: Supports `.txt`, `.csv`, `.tsv`, `.log`, `.md`, `.text` files
+- **Content enhancement**: AI adds proper headings, bullet points, emphasis, and structure to improve document readability
+
 ### Image Documents & Embedded Image Processing (AI Vision)
 - **Multiple AI service support**: Choose between OpenAI (cloud) and OLLAMA (local) for image processing
 - **Privacy-focused processing**: Use OLLAMA to keep all image data on your local machine
@@ -368,6 +394,57 @@ Some **bold text** and *italic text*
 | --- | --- | --- |
 | Data 1 | Data 2 | Data 3 |
 | Data 4 | Data 5 | Data 6 |
+```
+
+### AI-Enhanced Plain Text Conversion
+Input plain text file:
+```
+Project Status Report
+
+Executive Summary
+The Q1 development project is progressing well with most milestones on track.
+
+Key Achievements
+- Completed user interface mockups
+- Finalized database schema design
+- Set up development environment
+
+Current Challenges
+Resource allocation has been tight due to competing priorities.
+```
+
+Output Markdown with AI-enhanced structure:
+```markdown
+# Project Status Report
+
+## Executive Summary
+The Q1 development project is progressing well, with most milestones on track.
+
+## Key Achievements
+- Completed user interface mockups
+- Finalized database schema design
+- Set up development environment
+
+## Current Challenges
+Resource allocation has been tight due to competing priorities. The team is working overtime to maintain the schedule.
+```
+
+### CSV to Markdown Table Conversion
+Input CSV file:
+```
+Employee ID,Name,Department,Salary
+001,Alice Johnson,Engineering,75000
+002,Bob Smith,Marketing,65000
+```
+
+Output Markdown table:
+```markdown
+# Employee Information
+
+| Employee ID | Name         | Department  | Salary |
+|:-----------:|:-------------|:------------|-------:|
+| 001         | Alice Johnson| Engineering |  75000 |
+| 002         | Bob Smith    | Marketing   |  65000 |
 ```
 
 ### AI-Powered Flowchart Conversion
@@ -463,7 +540,7 @@ python test_image_converter.py
 
 2. **No documents found**:
    - Make sure your documents are in the `input` folder
-   - Supported formats: Word (.docx, .doc), PDF (.pdf), Excel (.xlsx, .xlsm, .xlsb, .xls), Images (.jpg, .png, etc.)
+   - Supported formats: Word (.docx, .doc), PDF (.pdf), Excel (.xlsx, .xlsm, .xlsb, .xls), Plain Text (.txt, .csv, .tsv, .log), Images (.jpg, .png, etc.)
 
 3. **Permission errors**:
    - Make sure you have write permissions in the output folder
@@ -494,6 +571,13 @@ python test_image_converter.py
    - Review the conversion logs for detailed information
    - Verify AI service availability with the test script
 
+7. **Plain text processing issues**:
+   - **CSV/TSV not formatting correctly**: Check file encoding (should be UTF-8) and delimiter consistency
+   - **AI enhancement not working**: Verify AI service is configured and available (run `python test_ai_services.py`)
+   - **Large files timing out**: Content is automatically chunked, but very large files may need longer timeout settings
+   - **Poor text structure**: AI analysis works best with well-structured input text; consider manual formatting for heavily corrupted text
+   - **Fallback mode**: When AI is unavailable, basic text-to-markdown conversion is used automatically
+
 ### Performance Tips
 
 - **Choose the right AI service**:
@@ -516,6 +600,7 @@ python test_image_converter.py
 ## Quick Start Guides
 
 - **[OLLAMA Setup Guide](OLLAMA_SETUP_GUIDE.md)**: Complete guide for setting up local AI
+- **[Plain Text Converter Guide](PLAIN_TEXT_CONVERTER_GUIDE.md)**: Comprehensive guide for text and CSV processing with AI enhancement
 - **[Image Conversion Guide](IMAGE_CONVERSION_GUIDE.md)**: Comprehensive image processing documentation
 - **[AI Services Documentation](AI_SERVICES.md)**: Technical details about the AI service architecture
 
