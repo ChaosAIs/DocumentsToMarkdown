@@ -13,6 +13,7 @@ from typing import List, Dict, Any, Optional
 from .base_converter import BaseDocumentConverter
 from .word_converter import WordDocumentConverter
 from .pdf_converter import PDFDocumentConverter
+from .excel_converter import ExcelDocumentConverter
 
 
 class DocumentConverterManager:
@@ -41,7 +42,8 @@ class DocumentConverterManager:
         # Initialize converters
         self.converters: List[BaseDocumentConverter] = [
             WordDocumentConverter(),
-            PDFDocumentConverter()
+            PDFDocumentConverter(),
+            ExcelDocumentConverter()
         ]
         
         # Create folders if they don't exist

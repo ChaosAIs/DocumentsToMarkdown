@@ -6,11 +6,12 @@ A modular Python application that converts various document types to Markdown fo
 
 - **Word Documents**: `.docx`, `.doc`
 - **PDF Documents**: `.pdf`
+- **Excel Spreadsheets**: `.xlsx`, `.xlsm`, `.xlsb`, `.xls`
 
 ## Features
 
 ### Core Features
-- **Multi-format support**: Word and PDF documents
+- **Multi-format support**: Word, PDF, and Excel documents
 - **Automatic section numbering**: Hierarchical numbering (1, 1.1, 1.2, etc.)
 - **Modular architecture**: Pluggable converter system
 - **Batch processing**: Convert multiple documents at once
@@ -42,6 +43,10 @@ pip install -r requirements.txt
 ### Dependencies
 - `python-docx`: For Word document processing
 - `PyMuPDF`: For PDF document processing and text extraction
+- `openpyxl`: For Excel document processing (.xlsx, .xlsm, .xlsb)
+- `xlrd`: For legacy Excel document processing (.xls)
+- `openpyxl`: For Excel document processing (.xlsx, .xlsm, .xlsb)
+- `xlrd`: For legacy Excel document processing (.xls)
 
 ## Usage
 
@@ -49,7 +54,7 @@ pip install -r requirements.txt
 
 1. **Setup folders**: The application will automatically create `input` and `output` folders if they don't exist.
 
-2. **Add documents**: Place your documents (Word or PDF files) in the `input` folder.
+2. **Add documents**: Place your documents (Word, PDF, or Excel files) in the `input` folder.
 
 3. **Run the converter**:
 
@@ -88,6 +93,7 @@ DocumentsToMarkdown/
 │   ├── base_converter.py         # Abstract base converter
 │   ├── word_converter.py         # Word document converter
 │   ├── pdf_converter.py          # PDF document converter
+│   ├── excel_converter.py        # Excel document converter
 │   └── document_converter_manager.py  # Main orchestrator
 ├── input/                        # Place documents here
 └── output/                       # Converted Markdown files appear here
@@ -100,6 +106,7 @@ The v2.0 converter uses a modular architecture:
 - **BaseDocumentConverter**: Abstract base class defining the converter interface
 - **WordDocumentConverter**: Handles Word document conversion with advanced formatting detection
 - **PDFDocumentConverter**: Handles PDF conversion with font-based heading detection
+- **ExcelDocumentConverter**: Handles Excel spreadsheet conversion with table formatting
 - **DocumentConverterManager**: Orchestrates multiple converters and provides unified interface
 
 This design makes it easy to add new document formats by creating new converter classes.
@@ -118,6 +125,12 @@ This design makes it easy to add new document formats by creating new converter 
 
 ### Tables
 Word tables are converted to Markdown table format with proper headers and alignment.
+
+### Excel Spreadsheets
+- **Multi-worksheet support**: Each worksheet becomes a separate section
+- **Table formatting**: Spreadsheet data converted to Markdown tables
+- **Data type preservation**: Numbers, text, dates, and formulas handled appropriately
+- **Format compatibility**: Supports modern (.xlsx, .xlsm, .xlsb) and legacy (.xls) formats
 
 ### Error Handling
 - Graceful handling of corrupted or unsupported files

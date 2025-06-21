@@ -159,27 +159,51 @@ class WordDocumentConverter(BaseDocumentConverter):
 
         return f"{markdown_text}\n\n"
     
+    def _extract_cell_content(self, cell) -> str:
+        """Extract content from a table cell, handling multiple paragraphs properly."""
+        if not cell.paragraphs:
+            return ""
+
+        # Join all paragraphs in the cell with a space to keep content in one line
+        # This prevents table structure from breaking due to newlines
+        cell_parts = []
+        for paragraph in cell.paragraphs:
+            para_text = paragraph.text.strip()
+            if para_text:
+                cell_parts.append(para_text)
+
+        # Join with space and clean up any extra whitespace
+        cell_content = " ".join(cell_parts).strip()
+
+        # Replace any remaining newlines with spaces to ensure table integrity
+        cell_content = cell_content.replace('\n', ' ').replace('\r', ' ')
+
+        # Clean up multiple consecutive spaces
+        cell_content = ' '.join(cell_content.split())
+
+        return cell_content
+
     def _convert_table_to_markdown(self, table: Table) -> str:
         """Convert a Word table to Markdown table format."""
         if not table.rows:
             return ""
-        
+
         markdown_table = ""
-        
+
         # Process header row
         header_row = table.rows[0]
-        header_cells = [cell.text.strip() for cell in header_row.cells]
+        header_cells = [self._extract_cell_content(cell) for cell in header_row.cells]
         markdown_table += "| " + " | ".join(header_cells) + " |\n"
-        
+
         # Add separator row
         separator = "| " + " | ".join(["---"] * len(header_cells)) + " |\n"
         markdown_table += separator
-        
+
         # Process data rows
         for row in table.rows[1:]:
-            row_cells = [cell.text.strip() for cell in row.cells]
+            row_cells = [self._extract_cell_content(cell) for cell in row.cells]
             markdown_table += "| " + " | ".join(row_cells) + " |\n"
-        
+
         return markdown_table + "\n"
     
     def _analyze_document_structure(self, doc: Document) -> None:
