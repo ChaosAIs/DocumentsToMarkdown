@@ -1,4 +1,4 @@
-# Document to Markdown Converter v2.0
+# Document to Markdown Converter
 
 A powerful, modular Python application that converts various document types to Markdown format with AI-driven image extraction and automatic section numbering.
 
@@ -40,7 +40,7 @@ A powerful, modular Python application that converts various document types to M
 - **Table detection**: Automatically converts tabular data
 - **Error handling**: Graceful handling of corrupted files
 - **Detailed logging**: Comprehensive conversion reports
-- **Configurable options**: Enable/disable section numbering and image extraction
+- **Configurable AI settings**: Customize image processing and AI model parameters
 
 ## Installation
 
@@ -95,17 +95,14 @@ pip install -r requirements.txt
 3. **Run the converter**:
 
 ```bash
-# Convert all documents with section numbering (recommended)
-python document_converter_v2.py
-
-# Convert without section numbering
-python document_converter_v2.py --no-numbering
+# Convert all documents
+python document_converter.py
 
 # Use custom input/output folders
-python document_converter_v2.py --input docs --output markdown
+python document_converter.py --input docs --output markdown
 
 # Show converter statistics
-python document_converter_v2.py --stats
+python document_converter.py --stats
 ```
 
 4. **Check results**: Converted Markdown files will be saved in the `output` folder.
