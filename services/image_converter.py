@@ -144,17 +144,53 @@ class ImageDocumentConverter(BaseDocumentConverter):
             if not image_base64:
                 return f"# Error Processing Image\n\nFailed to prepare image: {image_path.name}\n"
             
-            # Create the vision prompt - focused on content extraction only
-            prompt = """Extract all text content from this image. Return only the actual content without any explanations or descriptions of formatting styles.
+            # Create the vision prompt - enhanced for flowchart detection and ASCII conversion
+            prompt = """Extract content from this image based on what type of content it contains. Return ONLY the extracted content without any explanations or analysis steps.
 
-Requirements:
+If this is a FLOWCHART/PROCESS DIAGRAM/WORKFLOW:
+- Convert to ASCII flow diagram using text characters
+- Use arrows (→, ↓, ←, ↑) and boxes made with characters like ┌─┐│└─┘
+- Show the flow direction clearly
+- Include all text labels from boxes/nodes
+- Represent decision points with diamond shapes
+- Example format:
+```
+┌─────────────┐
+│   Start     │
+└──────┬──────┘
+       ↓
+┌─────────────┐
+│  Process A  │
+└──────┬──────┘
+       ↓
+    /\\     /\\
+   /  \\   /  \\
+  /    \\ /    \\
+ / Decision?  \\
+ \\            /
+  \\          /
+   \\        /
+    \\      /
+     \\    /
+      \\  /
+       \\/
+    Yes ↓  No →
+```
+
+If this is a TABLE/FORM:
+- Format as Markdown table
+- Preserve all data and structure
+
+If this is REGULAR TEXT/DOCUMENT:
 - Extract ALL visible text exactly as written
-- Preserve structure using appropriate Markdown formatting (headers, lists, tables)
-- For diagrams/flowcharts: extract text labels and describe the process flow
-- For tables: format as Markdown tables
+- Preserve structure using appropriate Markdown formatting
 - Read left to right, top to bottom for multi-column content
+
+REQUIREMENTS:
+- Return ONLY the actual content - no explanations, no analysis steps, no descriptions
 - Use [unclear] for illegible text
-- Do not explain what you see - just provide the extracted content"""
+- For logos or simple images with minimal text, return only the text content
+- Skip images that contain no meaningful text content"""
 
             # Make API call to OpenAI Vision
             response = self.client.chat.completions.create(

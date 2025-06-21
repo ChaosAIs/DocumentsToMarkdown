@@ -328,6 +328,23 @@ class BaseDocumentConverter(ABC):
             "no visible text"
         ]
 
+        # List of phrases that indicate unwanted analysis steps in output
+        analysis_indicators = [
+            "step 1: determine the image type",
+            "step 2: extract content based on type",
+            "for regular text:",
+            "for flowcharts/process diagrams:",
+            "for tables/forms:",
+            "- this is a logo",
+            "- this is a regular image",
+            "- extracted text:"
+        ]
+
+        # Check if content contains analysis steps that should be filtered out
+        for indicator in analysis_indicators:
+            if indicator in content_lower:
+                return True
+
         # Check if content is only failed indicators
         for indicator in failed_indicators:
             if indicator in content_lower:
@@ -338,5 +355,17 @@ class BaseDocumentConverter(ABC):
         # Check if content is too short to be meaningful (less than 5 characters)
         if len(content.strip()) < 5:
             return True
+
+        # Check if content is just a simple logo text (common patterns)
+        simple_logo_patterns = [
+            r'^[a-z]{2,5}$',  # Simple 2-5 letter logos like "BDO", "IBM", etc.
+            r'^\*\*[a-z]{2,5}\*\*$',  # Bold logos like "**BDO**"
+        ]
+
+        import re
+        content_clean = content.strip()
+        for pattern in simple_logo_patterns:
+            if re.match(pattern, content_clean, re.IGNORECASE):
+                return True
 
         return False
