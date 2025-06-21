@@ -63,9 +63,41 @@ class BaseAIService(ABC):
     def get_model_name(self) -> str:
         """
         Get the name of the model being used.
-        
+
         Returns:
             Model name (e.g., "gpt-4o", "llava:latest")
+        """
+        pass
+
+    @abstractmethod
+    def analyze_text_content(self, text_content: str, file_type: str = "txt") -> str:
+        """
+        Analyze plain text content and suggest markdown structure improvements.
+
+        Args:
+            text_content: The plain text content to analyze
+            file_type: Type of the source file (txt, csv, etc.)
+
+        Returns:
+            Improved markdown content with proper structure, sections, and formatting
+        """
+        pass
+
+    @abstractmethod
+    def analyze_text_chunk(self, text_content: str, file_type: str, chunk_index: int,
+                          total_chunks: int, chunk_metadata: dict = None) -> str:
+        """
+        Analyze a chunk of text content with awareness of its position in the larger document.
+
+        Args:
+            text_content: The text chunk content to analyze
+            file_type: Type of the source file (txt, csv, etc.)
+            chunk_index: Index of this chunk (0-based)
+            total_chunks: Total number of chunks in the document
+            chunk_metadata: Additional metadata about the chunk
+
+        Returns:
+            Improved markdown content for this chunk
         """
         pass
     

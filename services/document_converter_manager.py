@@ -15,6 +15,7 @@ from .word_converter import WordDocumentConverter
 from .pdf_converter import PDFDocumentConverter
 from .excel_converter import ExcelDocumentConverter
 from .image_converter import ImageDocumentConverter
+from .plain_text_converter import PlainTextConverter
 
 
 class DocumentConverterManager:
@@ -45,7 +46,8 @@ class DocumentConverterManager:
             WordDocumentConverter(),
             PDFDocumentConverter(),
             ExcelDocumentConverter(),
-            ImageDocumentConverter()
+            ImageDocumentConverter(),
+            PlainTextConverter()
         ]
         
         # Create folders if they don't exist

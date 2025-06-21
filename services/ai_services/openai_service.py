@@ -128,3 +128,181 @@ class OpenAIService(BaseAIService):
         except Exception as e:
             self.logger.error(f"Error extracting text from image {image_path}: {str(e)}")
             return f"# Error Extracting Text\n\nFailed to extract text from {image_path.name}: {str(e)}\n"
+
+    def analyze_text_content(self, text_content: str, file_type: str = "txt") -> str:
+        """
+        Analyze plain text content and suggest markdown structure improvements.
+
+        Args:
+            text_content: The plain text content to analyze
+            file_type: Type of the source file (txt, csv, etc.)
+
+        Returns:
+            Improved markdown content with proper structure, sections, and formatting
+        """
+        if not self.is_available():
+            raise AIServiceUnavailableError("OpenAI service is not available")
+
+        try:
+            # Create a prompt based on file type
+            if file_type.lower() == "csv":
+                prompt = """Analyze the following CSV content and convert it to a well-formatted markdown table.
+Include proper headers, alignment, and any necessary formatting. If there are multiple tables or sections,
+organize them appropriately with headers.
+
+CSV Content:
+"""
+            else:
+                prompt = """Analyze the following plain text content and convert it to well-structured markdown.
+Apply proper sections, headings, formatting, and organization to make it more readable and professional.
+Add a summary if appropriate, organize content into logical sections, and improve the overall structure
+while preserving all original information.
+
+Text Content:
+"""
+
+            # Make API call to OpenAI
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt + text_content
+                    }
+                ],
+                max_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
+
+            # Extract the response content
+            if response.choices and response.choices[0].message.content:
+                analyzed_content = response.choices[0].message.content.strip()
+                self.logger.info(f"Successfully analyzed {len(text_content)} characters of {file_type} content")
+                return analyzed_content
+            else:
+                self.logger.warning(f"No analysis result for {file_type} content")
+                return f"# Content Analysis Failed\n\nCould not analyze the provided {file_type} content.\n\n```\n{text_content}\n```\n"
+
+        except Exception as e:
+            self.logger.error(f"Error analyzing {file_type} content: {str(e)}")
+            return f"# Error Analyzing Content\n\nFailed to analyze {file_type} content: {str(e)}\n\n```\n{text_content}\n```\n"
+
+    def analyze_text_chunk(self, text_content: str, file_type: str, chunk_index: int,
+                          total_chunks: int, chunk_metadata: dict = None) -> str:
+        """
+        Analyze a chunk of text content with awareness of its position in the larger document.
+
+        Args:
+            text_content: The text chunk content to analyze
+            file_type: Type of the source file (txt, csv, etc.)
+            chunk_index: Index of this chunk (0-based)
+            total_chunks: Total number of chunks in the document
+            chunk_metadata: Additional metadata about the chunk
+
+        Returns:
+            Improved markdown content for this chunk
+        """
+        if not self.is_available():
+            raise AIServiceUnavailableError("OpenAI service is not available")
+
+        try:
+            # Create chunk-aware prompts
+            if file_type.lower() == "csv":
+                if chunk_index == 0 and total_chunks == 1:
+                    # Single chunk CSV
+                    prompt = """Analyze the following CSV content and convert it to a well-formatted markdown table.
+Include proper headers, alignment, and any necessary formatting. If there are multiple tables or sections,
+organize them appropriately with headers.
+
+CSV Content:
+"""
+                elif chunk_index == 0:
+                    # First chunk of multi-chunk CSV
+                    prompt = f"""This is the first part (chunk 1 of {total_chunks}) of a large CSV dataset.
+Convert this chunk to a well-formatted markdown table with proper headers and alignment.
+Since this is part of a larger dataset, focus on creating a clean table structure that can be combined with other parts.
+
+CSV Content (Part 1 of {total_chunks}):
+"""
+                elif chunk_index == total_chunks - 1:
+                    # Last chunk of multi-chunk CSV
+                    prompt = f"""This is the final part (chunk {chunk_index + 1} of {total_chunks}) of a large CSV dataset.
+Convert this chunk to a well-formatted markdown table. This continues from previous parts, so maintain consistent formatting.
+Do not repeat headers - just provide the data rows in table format.
+
+CSV Content (Part {chunk_index + 1} of {total_chunks}):
+"""
+                else:
+                    # Middle chunk of multi-chunk CSV
+                    prompt = f"""This is part {chunk_index + 1} of {total_chunks} of a large CSV dataset.
+Convert this chunk to a well-formatted markdown table. This continues from previous parts, so maintain consistent formatting.
+Do not repeat headers - just provide the data rows in table format.
+
+CSV Content (Part {chunk_index + 1} of {total_chunks}):
+"""
+            else:
+                # Text content chunking
+                if chunk_index == 0 and total_chunks == 1:
+                    # Single chunk text
+                    prompt = """Analyze the following plain text content and convert it to well-structured markdown.
+Apply proper sections, headings, formatting, and organization to make it more readable and professional.
+Add a summary if appropriate, organize content into logical sections, and improve the overall structure
+while preserving all original information.
+
+Text Content:
+"""
+                elif chunk_index == 0:
+                    # First chunk of multi-chunk text
+                    prompt = f"""This is the beginning (part 1 of {total_chunks}) of a large document.
+Analyze this content and convert it to well-structured markdown. Create appropriate headings, sections, and formatting.
+Since this is the first part, include a document title and introduction if appropriate. The content continues in subsequent parts.
+
+Text Content (Part 1 of {total_chunks}):
+"""
+                elif chunk_index == total_chunks - 1:
+                    # Last chunk of multi-chunk text
+                    prompt = f"""This is the final part (part {chunk_index + 1} of {total_chunks}) of a large document.
+Convert this content to well-structured markdown, maintaining consistency with the previous parts.
+Add a conclusion or summary if appropriate since this is the end of the document.
+
+Text Content (Part {chunk_index + 1} of {total_chunks}):
+"""
+                else:
+                    # Middle chunk of multi-chunk text
+                    prompt = f"""This is part {chunk_index + 1} of {total_chunks} of a large document.
+Convert this content to well-structured markdown, maintaining consistency with previous parts.
+Focus on clear section organization and proper formatting.
+
+Text Content (Part {chunk_index + 1} of {total_chunks}):
+"""
+
+            # Add metadata information if available
+            if chunk_metadata:
+                if file_type.lower() == "csv" and 'row_start' in chunk_metadata:
+                    prompt += f"\n\nNote: This chunk contains rows {chunk_metadata['row_start']} to {chunk_metadata['row_end']} of {chunk_metadata['total_rows']} total rows."
+
+            # Make API call to OpenAI
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt + text_content
+                    }
+                ],
+                max_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
+
+            # Extract the response content
+            if response.choices and response.choices[0].message.content:
+                analyzed_content = response.choices[0].message.content.strip()
+                self.logger.info(f"Successfully analyzed chunk {chunk_index + 1}/{total_chunks} of {file_type} content ({len(text_content)} characters)")
+                return analyzed_content
+            else:
+                self.logger.warning(f"No analysis result for chunk {chunk_index + 1}/{total_chunks} of {file_type} content")
+                return f"# Content Analysis Failed (Chunk {chunk_index + 1}/{total_chunks})\n\nCould not analyze this part of the {file_type} content.\n\n```\n{text_content}\n```\n"
+
+        except Exception as e:
+            self.logger.error(f"Error analyzing chunk {chunk_index + 1}/{total_chunks} of {file_type} content: {str(e)}")
+            return f"# Error Analyzing Content (Chunk {chunk_index + 1}/{total_chunks})\n\nFailed to analyze this part of {file_type} content: {str(e)}\n\n```\n{text_content}\n```\n"
