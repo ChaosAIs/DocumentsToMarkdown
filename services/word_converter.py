@@ -441,9 +441,63 @@ class WordDocumentConverter(BaseDocumentConverter):
         self.logger.info(f"Final image mapping: {image_positions}")
         return image_positions
 
+    def _is_legacy_doc_format(self, doc_path: Path) -> bool:
+        """Check if the file is a legacy .doc format (OLE2/Compound Document)."""
+        try:
+            with open(doc_path, 'rb') as f:
+                header = f.read(8)
+                # OLE2/Compound Document signature
+                return header == b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'
+        except Exception:
+            return False
+
+    def _convert_legacy_doc_to_markdown(self, doc_path: Path) -> str:
+        """Convert legacy .doc file to markdown with basic text extraction."""
+        try:
+            # For legacy .doc files, we'll provide a basic conversion
+            # since python-docx doesn't support them
+            self.logger.warning(f"Legacy .doc format detected for {doc_path.name}. Providing basic conversion.")
+
+            # Reset section counters for new document
+            self._reset_section_counters()
+
+            # Create a basic markdown document with file information
+            markdown_content = f"# {doc_path.stem}\n\n"
+            markdown_content += "## Document Information\n\n"
+            markdown_content += f"- **File Name**: {doc_path.name}\n"
+            markdown_content += f"- **File Size**: {doc_path.stat().st_size:,} bytes\n"
+            markdown_content += f"- **Format**: Legacy Microsoft Word Document (.doc)\n\n"
+
+            markdown_content += "## Conversion Notice\n\n"
+            markdown_content += "This document is in the legacy .doc format (Microsoft Compound Document/OLE2), "
+            markdown_content += "which is not fully supported by the python-docx library. "
+            markdown_content += "For complete conversion with full formatting and content extraction, "
+            markdown_content += "please convert this file to .docx format using Microsoft Word or LibreOffice.\n\n"
+
+            markdown_content += "### Recommended Steps:\n\n"
+            markdown_content += "1. Open the file in Microsoft Word or LibreOffice Writer\n"
+            markdown_content += "2. Save/Export as .docx format\n"
+            markdown_content += "3. Re-run the conversion on the .docx file\n\n"
+
+            markdown_content += "### Alternative Solutions:\n\n"
+            markdown_content += "- Use online converters to convert .doc to .docx\n"
+            markdown_content += "- Use command-line tools like `libreoffice --convert-to docx`\n"
+            markdown_content += "- Use specialized libraries like `python-docx2txt` for basic text extraction\n\n"
+
+            return markdown_content
+
+        except Exception as e:
+            self.logger.error(f"Error processing legacy .doc file {doc_path}: {str(e)}")
+            return f"# Error Converting Legacy Document\n\nFailed to process {doc_path.name}: {str(e)}\n"
+
     def _convert_document_to_markdown(self, doc_path: Path) -> str:
         """Convert a Word document to Markdown format."""
+        # Check if this is a legacy .doc format first
+        if doc_path.suffix.lower() == '.doc' and self._is_legacy_doc_format(doc_path):
+            return self._convert_legacy_doc_to_markdown(doc_path)
+
         try:
+            # For .docx files or .doc files that are actually .docx format
             doc = Document(str(doc_path))
 
             # Reset section counters for new document
@@ -505,4 +559,8 @@ class WordDocumentConverter(BaseDocumentConverter):
 
         except Exception as e:
             self.logger.error(f"Error converting Word document {doc_path}: {str(e)}")
+            # If it's a .doc file and we get an error, try the legacy conversion
+            if doc_path.suffix.lower() == '.doc':
+                self.logger.info(f"Attempting legacy .doc conversion for {doc_path.name}")
+                return self._convert_legacy_doc_to_markdown(doc_path)
             return f"# Error Converting Document\n\nFailed to convert {doc_path.name}: {str(e)}\n"

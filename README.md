@@ -723,6 +723,78 @@ Images containing flowcharts are automatically converted to ASCII diagrams:
 └─────────────┘
 ```
 
+## 🎯 Demo Files & Live Examples
+
+We've included a comprehensive set of demo files to showcase the converter's capabilities across different document types. You can find these in the [`demo_files`](demo_files/) folder along with their converted outputs in [`demo_files/output`](demo_files/output/).
+
+### 📁 Available Demo Files
+
+| Input File | Type | Description | Output |
+|------------|------|-------------|---------|
+| [`employees.csv`](demo_files/employees.csv) | CSV | Employee data with headers | [`employees.md`](demo_files/output/employees.md) |
+| [`inventory.tsv`](demo_files/inventory.tsv) | TSV | Tab-separated inventory data | [`inventory.md`](demo_files/output/inventory.md) |
+| [`project_report.txt`](demo_files/project_report.txt) | Plain Text | Project status report | [`project_report.md`](demo_files/output/project_report.md) |
+| [`system.log`](demo_files/system.log) | Log File | System log entries | [`system.md`](demo_files/output/system.md) |
+| [`file_example_XLS_50.xls`](demo_files/file_example_XLS_50.xls) | Excel | Sample spreadsheet data | [`file_example_XLS_50.md`](demo_files/output/file_example_XLS_50.md) |
+| [`file-sample_500kB.doc`](demo_files/file-sample_500kB.doc) | Word Doc | Legacy Word document | [`file-sample_500kB.md`](demo_files/output/file-sample_500kB.md) |
+| [`file-example_PDF_500_kB.pdf`](demo_files/file-example_PDF_500_kB.pdf) | PDF | Sample PDF with images | [`file-example_PDF_500_kB.md`](demo_files/output/file-example_PDF_500_kB.md) |
+| [`NET-Microservices-Architecture-for-Containerized-NET-Applications.pdf`](demo_files/NET-Microservices-Architecture-for-Containerized-NET-Applications.pdf) | PDF | Technical documentation (338 pages) | [`NET-Microservices-Architecture-for-Containerized-NET-Applications.md`](demo_files/output/NET-Microservices-Architecture-for-Containerized-NET-Applications.md) |
+| [`FlowChartSample.png`](demo_files/FlowChartSample.png) | Image | Flowchart diagram | [`FlowChartSample.md`](demo_files/output/FlowChartSample.md) |
+| [`employees_direct.md`](demo_files/employees_direct.md) | Markdown | Existing markdown file | [`employees_direct.md`](demo_files/output/employees_direct.md) |
+
+### 🚀 Try the Demo
+
+You can run the demo conversion yourself:
+
+```bash
+# Clone the repository
+git clone https://github.com/ChaosAIs/DocumentsToMarkdown.git
+cd DocumentsToMarkdown
+
+# Install the package
+pip install -e .
+
+# Convert all demo files
+python document_converter.py --input demo_files --output demo_files/output --verbose
+
+# Or use the CLI
+documents-to-markdown --input demo_files --output demo_files/output
+```
+
+### 📊 Demo Results Summary
+
+The demo showcases successful conversion of **10 different file types**:
+- ✅ **CSV/TSV files** → Properly formatted markdown tables
+- ✅ **Plain text files** → AI-enhanced markdown with structure
+- ✅ **Excel spreadsheets** → Data tables with preserved formatting
+- ✅ **Word documents** → Structured markdown with headings
+- ✅ **PDF documents** → Text extraction with embedded image processing
+- ✅ **Large technical PDFs** → Complete conversion with 137+ images processed
+- ✅ **Images with flowcharts** → ASCII diagram conversion
+- ✅ **Log files** → Formatted markdown with syntax highlighting
+
+### 🎨 Conversion Features Demonstrated
+
+**AI-Powered Image Processing:**
+- Extracted text from 142+ images across PDF documents
+- Converted flowchart images to ASCII diagrams
+- Processed embedded images within documents
+
+**Smart Text Processing:**
+- Enhanced CSV/TSV formatting with proper table alignment
+- Intelligent text structure recognition
+- Preserved data relationships and formatting
+
+**Document Structure Preservation:**
+- Maintained hierarchical heading structure
+- Preserved table formatting and data alignment
+- Kept original document flow and organization
+
+**Batch Processing Efficiency:**
+- Processed 10 diverse files in a single operation
+- Handled large documents (338-page PDF) successfully
+- Maintained consistent output quality across all formats
+
 ## 🔧 Troubleshooting
 
 ### Configuration Issues
