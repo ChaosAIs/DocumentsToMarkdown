@@ -1,3 +1,50 @@
+Metadata-Version: 2.4
+Name: documents-to-markdown
+Version: 1.0.0
+Summary: A comprehensive Python library for converting various document types to Markdown format
+Home-page: https://github.com/ChaosAIs/DocumentsToMarkdown
+Author: Felix
+Author-email: Felix <yangzhenwu@gmail.com>
+Maintainer-email: Felix <yangzhenwu@gmail.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/ChaosAIs/DocumentsToMarkdown
+Project-URL: Repository, https://github.com/ChaosAIs/DocumentsToMarkdown.git
+Project-URL: Documentation, https://github.com/ChaosAIs/DocumentsToMarkdown/blob/main/README.md
+Project-URL: Bug Reports, https://github.com/ChaosAIs/DocumentsToMarkdown/issues
+Keywords: document,conversion,markdown,word,pdf,excel,image,text,converter
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Text Processing :: Markup
+Classifier: Topic :: Office/Business :: Office Suites
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: python-docx>=1.2.0
+Requires-Dist: PyMuPDF>=1.24.14
+Requires-Dist: openpyxl>=3.1.2
+Requires-Dist: xlrd>=2.0.1
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: openai>=1.51.0
+Requires-Dist: Pillow>=10.4.0
+Requires-Dist: requests>=2.32.3
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.0; extra == "dev"
+Requires-Dist: black>=21.0; extra == "dev"
+Requires-Dist: flake8>=3.8; extra == "dev"
+Dynamic: author
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+
 # Documents to Markdown Converter
 
 A comprehensive Python library for converting various document types to Markdown format with AI-powered image extraction and processing capabilities.
@@ -196,90 +243,23 @@ Options:
   -v, --verbose         Enable verbose logging
   --version             Show version
   --help                Show help message
-
-Configuration Commands:
-  --config show         Show current configuration
-  --config init         Run interactive setup wizard
-  --config set KEY VALUE Set configuration value
-  --config test         Test AI service connectivity
-  --config validate     Validate configuration
-  --config location     Show config file locations
-  --config reset        Reset to default settings
 ```
 
-## ⚙️ Configuration & Settings
+## 🤖 AI Configuration (Optional)
 
-The package includes a comprehensive configuration system that makes setup easy and flexible.
+For enhanced image processing and text analysis, you can configure AI services:
 
-### 🎯 First-Time Setup (Automatic)
-
-When you first run the package, it automatically detects this is a new installation and offers to run a setup wizard:
+### Option 1: OLLAMA (Local AI) - Recommended for Privacy
 
 ```bash
-# First time running any command triggers setup wizard
-documents-to-markdown --help
-
-# Or run setup explicitly anytime
-documents-to-markdown --config init
-```
-
-The setup wizard will:
-1. ✅ **Detect available AI services** (OLLAMA, OpenAI)
-2. ✅ **Guide you through configuration** step-by-step
-3. ✅ **Test your settings** to ensure they work
-4. ✅ **Create all necessary files** automatically
-
-### 🔧 Configuration Commands
-
-```bash
-# View current configuration
-documents-to-markdown --config show
-
-# Run interactive setup wizard
-documents-to-markdown --config init
-
-# Set specific values
-documents-to-markdown --config set ai_service openai
-documents-to-markdown --config set openai.api_key your_key_here
-
-# Test AI service connectivity
-documents-to-markdown --config test
-
-# Validate configuration
-documents-to-markdown --config validate
-
-# Show configuration file locations
-documents-to-markdown --config location
-
-# Reset to defaults
-documents-to-markdown --config reset
-```
-
-### 📁 Configuration Files
-
-The package automatically creates configuration files in the appropriate location for your OS:
-
-**Windows:** `%APPDATA%\documents-to-markdown\`
-**macOS:** `~/Library/Application Support/documents-to-markdown/`
-**Linux:** `~/.config/documents-to-markdown/`
-
-Files created:
-- `config.json` - Main configuration settings
-- `.env` - Environment variables
-
-### 🤖 AI Service Configuration
-
-#### Option 1: OLLAMA (Local AI) - Privacy Focused
-
-```bash
-# Install OLLAMA (https://ollama.ai)
+# Install OLLAMA (see https://ollama.ai)
 ollama serve
 ollama pull llava:latest
 
-# Configure via CLI
-documents-to-markdown --config set ai_service ollama
-documents-to-markdown --config set ollama.base_url http://localhost:11434
-documents-to-markdown --config set ollama.model llava:latest
+# Create .env file
+echo "AI_SERVICE=ollama" > .env
+echo "OLLAMA_BASE_URL=http://localhost:11434" >> .env
+echo "OLLAMA_MODEL=llava:latest" >> .env
 ```
 
 **Benefits:**
@@ -287,16 +267,13 @@ documents-to-markdown --config set ollama.model llava:latest
 - ✅ **Private**: Data never leaves your computer
 - ✅ **Offline**: Works without internet
 
-#### Option 2: OpenAI (Cloud AI) - Easy Setup
+### Option 2: OpenAI (Cloud AI) - Recommended for Ease
 
 ```bash
 # Get API key from https://platform.openai.com/api-keys
-documents-to-markdown --config set ai_service openai
-documents-to-markdown --config set openai.api_key your_key_here
-
-# Or set via environment variable
-export OPENAI_API_KEY=your_key_here  # Linux/macOS
-set OPENAI_API_KEY=your_key_here     # Windows
+# Create .env file
+echo "AI_SERVICE=openai" > .env
+echo "OPENAI_API_KEY=your_api_key_here" >> .env
 ```
 
 **Benefits:**
@@ -304,127 +281,40 @@ set OPENAI_API_KEY=your_key_here     # Windows
 - ✅ **High Quality**: Consistently good results
 - ❌ **Costs Money**: Pay per API call
 
-#### Option 3: Auto-Detection (Recommended)
+### Auto-Detection (Recommended)
 
 ```bash
-# Let the system choose the best available service
-documents-to-markdown --config set ai_service ""
-
-# Configure both services as backup
-documents-to-markdown --config set ollama.base_url http://localhost:11434
-documents-to-markdown --config set openai.api_key your_key_here
+# Configure both services - system will choose best available
+cat > .env << EOF
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llava:latest
+OPENAI_API_KEY=your_api_key_here
+EOF
 ```
 
-The system will try OLLAMA first (private), then fallback to OpenAI if needed.
-
-### ⚙️ Advanced Configuration
-
-#### Complete Configuration Example
-
-```json
-{
-  "ai_service": "",
-  "add_section_numbers": true,
-  "verbose_logging": false,
-  "openai": {
-    "api_key": "sk-your-key-here",
-    "model": "gpt-4o",
-    "max_tokens": 4096,
-    "temperature": 0.1,
-    "base_url": "https://api.openai.com/v1"
-  },
-  "ollama": {
-    "base_url": "http://localhost:11434",
-    "model": "llava:latest",
-    "timeout": 120,
-    "temperature": 0.1
-  },
-  "image_processing": {
-    "max_size_mb": 20,
-    "quality_compression": 85,
-    "max_size_pixels": 2048
-  },
-  "logging": {
-    "level": "INFO",
-    "file_logging": false
-  }
-}
-```
-
-#### Setting Values via CLI
+### Advanced Configuration
 
 ```bash
-# General settings
-documents-to-markdown --config set add_section_numbers true
-documents-to-markdown --config set verbose_logging false
+# Complete .env configuration
+AI_SERVICE=ollama|openai          # Specific service or leave empty for auto-detection
 
-# OpenAI settings
-documents-to-markdown --config set openai.model gpt-4o
-documents-to-markdown --config set openai.max_tokens 4096
-documents-to-markdown --config set openai.temperature 0.1
+# OpenAI Settings
+OPENAI_MODEL=gpt-4o
+OPENAI_MAX_TOKENS=4096
+OPENAI_TEMPERATURE=0.1
 
-# OLLAMA settings
-documents-to-markdown --config set ollama.model llava:latest
-documents-to-markdown --config set ollama.timeout 120
-
-# Image processing
-documents-to-markdown --config set image_processing.max_size_mb 20
-documents-to-markdown --config set image_processing.quality_compression 85
-
-# Logging
-documents-to-markdown --config set logging.level DEBUG
-```
-
-#### Environment Variables
-
-You can also use environment variables (they override config file settings):
-
-```bash
-# AI Service
-export AI_SERVICE=openai
-
-# OpenAI
-export OPENAI_API_KEY=your_key_here
-export OPENAI_MODEL=gpt-4o
-export OPENAI_MAX_TOKENS=4096
-
-# OLLAMA
-export OLLAMA_BASE_URL=http://localhost:11434
-export OLLAMA_MODEL=llava:latest
-export OLLAMA_TIMEOUT=120
+# OLLAMA Settings
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llava:latest
+OLLAMA_TIMEOUT=120
 
 # Image Processing
-export IMAGE_MAX_SIZE_MB=20
-export IMAGE_QUALITY_COMPRESSION=85
+IMAGE_MAX_SIZE_MB=20
+IMAGE_QUALITY_COMPRESSION=85
+IMAGE_MAX_SIZE_PIXELS=2048
 
 # Logging
-export LOG_LEVEL=INFO
-```
-
-### 🔍 Testing & Validation
-
-```bash
-# Test AI service connectivity
-documents-to-markdown --config test
-
-# Example output:
-# 🔍 Testing AI service connectivity...
-#
-# 🤖 AI Service Status:
-# ✅ OLLAMA: Available
-#    Model: llava:latest
-# ❌ OpenAI: Not available
-#    Error: No API key configured
-#
-# 💡 Recommendations:
-#   • OLLAMA is available - great for privacy!
-#   • Consider setting up OpenAI as backup
-
-# Validate configuration
-documents-to-markdown --config validate
-
-# View current settings
-documents-to-markdown --config show
+LOG_LEVEL=INFO
 ```
 
 ## 📖 Examples
@@ -476,7 +366,7 @@ for result in results['results']:
 ```python
 from documents_to_markdown import DocumentConverter
 
-# Initialize with custom settings (overrides config file)
+# Initialize with custom settings
 converter = DocumentConverter(
     add_section_numbers=False,  # Disable numbering
     verbose=True               # Enable debug logging
@@ -492,57 +382,6 @@ for conv_info in stats['converters']:
     name = conv_info['name']
     exts = ', '.join(conv_info['supported_extensions'])
     print(f"{name}: {exts}")
-```
-
-### Programmatic Configuration Access
-
-```python
-from documents_to_markdown import get_config, save_config, get_config_directory
-
-# Get current configuration
-config = get_config()
-print(f"AI Service: {config.get('ai_service', 'auto-detect')}")
-print(f"Section Numbers: {config.get('add_section_numbers', True)}")
-
-# Modify configuration programmatically
-config['ai_service'] = 'openai'
-config['openai']['api_key'] = 'your-new-key'
-config['add_section_numbers'] = False
-
-# Save changes
-success = save_config(config)
-if success:
-    print("Configuration updated successfully!")
-
-# Get config directory path
-config_dir = get_config_directory()
-print(f"Config directory: {config_dir}")
-
-# Use updated configuration
-converter = DocumentConverter()  # Will use new settings
-```
-
-### Configuration-Aware Usage
-
-```python
-from documents_to_markdown import DocumentConverter, get_config
-
-# Check configuration before processing
-config = get_config()
-ai_service = config.get('ai_service', '')
-
-if ai_service == 'none':
-    print("AI features disabled - image processing will be skipped")
-elif not ai_service:
-    print("Auto-detection enabled - will try OLLAMA first, then OpenAI")
-else:
-    print(f"Using {ai_service} for AI processing")
-
-# Initialize converter (uses configuration automatically)
-converter = DocumentConverter()
-
-# Convert with current settings
-success = converter.convert_file("document.docx", "output.md")
 ```
 
 ## 🏗️ Architecture
@@ -710,81 +549,12 @@ Images containing flowcharts are automatically converted to ASCII diagrams:
 
 ## 🔧 Troubleshooting
 
-### Configuration Issues
+### Common Issues
 
-**Check Configuration Status:**
+**Installation Problems:**
 ```bash
-# View current configuration
-documents-to-markdown --config show
-
-# Test AI services
-documents-to-markdown --config test
-
-# Validate configuration
-documents-to-markdown --config validate
-
-# Show config file locations
-documents-to-markdown --config location
-```
-
-**Reset Configuration:**
-```bash
-# Reset to defaults if configuration is corrupted
-documents-to-markdown --config reset
-
-# Re-run setup wizard
-documents-to-markdown --config init
-```
-
-### AI Service Issues
-
-**OLLAMA Problems:**
-```bash
-# Check if OLLAMA is running
-curl http://localhost:11434/api/version
-
-# Start OLLAMA if not running
-ollama serve
-
-# Install vision model if missing
-ollama pull llava:latest
-
-# Test OLLAMA connectivity
-documents-to-markdown --config test
-```
-
-**OpenAI Problems:**
-```bash
-# Check API key
-echo $OPENAI_API_KEY
-
-# Set API key via configuration
-documents-to-markdown --config set openai.api_key your_key_here
-
-# Or set via environment variable
-export OPENAI_API_KEY=your_key_here
-
-# Test OpenAI connectivity
-documents-to-markdown --config test
-```
-
-**Auto-Detection Issues:**
-```bash
-# Check which services are available
-documents-to-markdown --config test
-
-# Force specific service if auto-detection fails
-documents-to-markdown --config set ai_service ollama
-# or
-documents-to-markdown --config set ai_service openai
-```
-
-### Installation Problems
-
-**Missing Dependencies:**
-```bash
-# Reinstall package
-pip install --upgrade documents-to-markdown
+# Missing dependencies
+pip install documents-to-markdown
 
 # Development installation
 git clone https://github.com/ChaosAIs/DocumentsToMarkdown.git
@@ -792,42 +562,23 @@ cd DocumentsToMarkdown
 pip install -e .
 ```
 
-**Permission Issues:**
+**AI Service Issues:**
 ```bash
-# Check config directory permissions
-documents-to-markdown --config location
+# Test AI services
+python -c "from documents_to_markdown.services.ai_services import ai_service_factory; print('AI services available:', ai_service_factory.get_available_services())"
 
-# On Linux/macOS, ensure user has write access to config directory
-chmod 755 ~/.config/documents-to-markdown/
+# OLLAMA not running
+ollama serve
+ollama pull llava:latest
+
+# OpenAI API key issues
+echo "OPENAI_API_KEY=your_key_here" > .env
 ```
 
-### File Processing Issues
-
-**Conversion Failures:**
-```bash
-# Enable verbose logging for debugging
-documents-to-markdown --config set verbose_logging true
-
-# Or use verbose flag
-documents-to-markdown --verbose --file document.docx output.md
-
-# Check supported formats
-documents-to-markdown --stats
-```
-
-**Common File Issues:**
-- Ensure files are in supported formats (.docx, .pdf, .xlsx, .png, .txt, .csv)
+**File Processing Issues:**
+- Ensure files are in supported formats
 - Check file permissions and paths
-- Verify files are not corrupted or password-protected
-- For large files, ensure sufficient disk space
-
-### Configuration Priority
-
-Settings are applied in this order (highest to lowest priority):
-1. **Command line arguments** (e.g., `--verbose`)
-2. **Environment variables** (e.g., `OPENAI_API_KEY`)
-3. **Configuration file** (`config.json`)
-4. **Default values**
+- Review logs for detailed error messages
 
 ## 🤝 Contributing
 
