@@ -13,7 +13,7 @@ import logging
 import json
 
 from .api import DocumentConverter
-from .config import config_manager, get_config, save_config
+from .config import config_manager, get_config, save_config, get_input_folder, get_output_folder
 from .setup_wizard import check_and_run_setup
 
 
@@ -93,6 +93,12 @@ def show_config():
     print(f"  Section Numbers: {'✓' if config.get('add_section_numbers', True) else '✗'}")
     print(f"  Verbose Logging: {'✓' if config.get('verbose_logging', False) else '✗'}")
 
+    # File paths settings
+    file_paths_config = config.get('file_paths', {})
+    print(f"\nFile Paths:")
+    print(f"  Input Folder: {file_paths_config.get('input_folder', 'input')}")
+    print(f"  Output Folder: {file_paths_config.get('output_folder', 'output')}")
+
     # OpenAI settings
     openai_config = config.get('openai', {})
     print(f"\nOpenAI Configuration:")
@@ -152,6 +158,17 @@ def init_config():
 
     verbose = input("Enable verbose logging? (y/N): ").strip().lower()
     config["verbose_logging"] = verbose == "y"
+
+    print("\n📁 File Paths")
+    current_input = config["file_paths"]["input_folder"]
+    input_folder = input(f"Input folder [{current_input}]: ").strip()
+    if input_folder:
+        config["file_paths"]["input_folder"] = input_folder
+
+    current_output = config["file_paths"]["output_folder"]
+    output_folder = input(f"Output folder [{current_output}]: ").strip()
+    if output_folder:
+        config["file_paths"]["output_folder"] = output_folder
 
     # Save configuration
     if save_config(config):
@@ -305,12 +322,16 @@ def show_config_location():
 
 def main():
     """Main function to run the document converter CLI."""
+    # Get configured default folders
+    default_input = get_input_folder()
+    default_output = get_output_folder()
+
     parser = argparse.ArgumentParser(
         description="Convert documents to Markdown format",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        epilog=f"""
 Examples:
-  documents-to-markdown                           # Convert all files in input/ folder
+  documents-to-markdown                           # Convert all files in {default_input}/ folder
   documents-to-markdown --no-numbering           # Convert without section numbering
   documents-to-markdown -i docs -o markdown      # Custom input/output folders
   documents-to-markdown --stats                  # Show converter statistics only
@@ -323,14 +344,14 @@ Examples:
 
     parser.add_argument(
         '--input', '-i',
-        default='input',
-        help='Input folder containing documents to convert (default: input)'
+        default=default_input,
+        help=f'Input folder containing documents to convert (default: {default_input})'
     )
 
     parser.add_argument(
         '--output', '-o',
-        default='output',
-        help='Output folder for converted Markdown files (default: output)'
+        default=default_output,
+        help=f'Output folder for converted Markdown files (default: {default_output})'
     )
 
     parser.add_argument(

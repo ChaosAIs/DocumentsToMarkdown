@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
 
 from .services.document_converter_manager import DocumentConverterManager
-from .config import get_config, ensure_config_exists
+from .config import get_config, ensure_config_exists, get_input_folder, get_output_folder
 
 
 class DocumentConverter:
@@ -59,8 +59,14 @@ class DocumentConverter:
         self._manager = None
         self._config = config
     
-    def _get_manager(self, input_folder: str = "input", output_folder: str = "output") -> DocumentConverterManager:
+    def _get_manager(self, input_folder: str = None, output_folder: str = None) -> DocumentConverterManager:
         """Get or create a DocumentConverterManager instance."""
+        # Use configured defaults if not specified
+        if input_folder is None:
+            input_folder = get_input_folder()
+        if output_folder is None:
+            output_folder = get_output_folder()
+
         if self._manager is None or self._manager.input_folder != Path(input_folder) or self._manager.output_folder != Path(output_folder):
             self._manager = DocumentConverterManager(
                 input_folder=input_folder,
@@ -101,8 +107,8 @@ class DocumentConverter:
         
         return temp_manager.convert_file(input_path)
     
-    def convert_all(self, input_folder: Union[str, Path] = "input", 
-                   output_folder: Union[str, Path] = "output") -> Dict[str, Any]:
+    def convert_all(self, input_folder: Optional[Union[str, Path]] = None,
+                   output_folder: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
         """
         Convert all supported documents in a folder to Markdown format.
         
@@ -124,6 +130,12 @@ class DocumentConverter:
             >>> results = converter.convert_all("docs", "markdown")
             >>> print(f"Converted {results['successful_conversions']} out of {results['total_files']} files")
         """
+        # Use configured defaults if not specified
+        if input_folder is None:
+            input_folder = get_input_folder()
+        if output_folder is None:
+            output_folder = get_output_folder()
+
         manager = self._get_manager(str(input_folder), str(output_folder))
         return manager.convert_all()
     
@@ -176,7 +188,7 @@ class DocumentConverter:
             >>> files = converter.get_convertible_files("documents")
             >>> print(f"Found {len(files)} convertible files")
         """
-        manager = self._get_manager(str(folder_path), "output")
+        manager = self._get_manager(str(folder_path), get_output_folder())
         return manager.get_convertible_files()
     
     def get_conversion_statistics(self) -> Dict[str, Any]:
@@ -250,7 +262,7 @@ def convert_document(input_file: Union[str, Path], output_file: Union[str, Path]
     return converter.convert_file(input_file, output_file)
 
 
-def convert_folder(input_folder: Union[str, Path], output_folder: Union[str, Path],
+def convert_folder(input_folder: Optional[Union[str, Path]] = None, output_folder: Optional[Union[str, Path]] = None,
                   add_section_numbers: bool = True) -> Dict[str, Any]:
     """
     Quick function to convert all documents in a folder.
@@ -268,6 +280,12 @@ def convert_folder(input_folder: Union[str, Path], output_folder: Union[str, Pat
         >>> results = convert_folder("docs", "markdown")
         >>> print(f"Converted {results['successful_conversions']} files")
     """
+    # Use configured defaults if not specified
+    if input_folder is None:
+        input_folder = get_input_folder()
+    if output_folder is None:
+        output_folder = get_output_folder()
+
     converter = DocumentConverter(add_section_numbers=add_section_numbers)
     return converter.convert_all(input_folder, output_folder)
 

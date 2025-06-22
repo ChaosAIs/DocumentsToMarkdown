@@ -69,6 +69,7 @@ documents-to-markdown --help
 - **Batch processing**: Convert multiple documents efficiently
 - **Preserves formatting**: Bold, italic, tables, and document structure
 - **Automatic section numbering**: Hierarchical numbering (1, 1.1, 1.2, etc.)
+- **Configurable file paths**: Set default input/output folders via environment variables
 - **Modular architecture**: Extensible converter system
 
 ### AI-Enhanced Features
@@ -241,6 +242,8 @@ documents-to-markdown --config init
 # Set specific values
 documents-to-markdown --config set ai_service openai
 documents-to-markdown --config set openai.api_key your_key_here
+documents-to-markdown --config set file_paths.input_folder my_docs
+documents-to-markdown --config set file_paths.output_folder my_output
 
 # Test AI service connectivity
 documents-to-markdown --config test
@@ -326,6 +329,10 @@ The system will try OLLAMA first (private), then fallback to OpenAI if needed.
   "ai_service": "",
   "add_section_numbers": true,
   "verbose_logging": false,
+  "file_paths": {
+    "input_folder": "input",
+    "output_folder": "output"
+  },
   "openai": {
     "api_key": "sk-your-key-here",
     "model": "gpt-4o",
@@ -357,6 +364,10 @@ The system will try OLLAMA first (private), then fallback to OpenAI if needed.
 # General settings
 documents-to-markdown --config set add_section_numbers true
 documents-to-markdown --config set verbose_logging false
+
+# File paths
+documents-to-markdown --config set file_paths.input_folder my_documents
+documents-to-markdown --config set file_paths.output_folder my_markdown
 
 # OpenAI settings
 documents-to-markdown --config set openai.model gpt-4o
@@ -396,6 +407,10 @@ export OLLAMA_TIMEOUT=120
 # Image Processing
 export IMAGE_MAX_SIZE_MB=20
 export IMAGE_QUALITY_COMPRESSION=85
+
+# File Paths
+export INPUT_FOLDER=my_documents
+export OUTPUT_FOLDER=my_markdown
 
 # Logging
 export LOG_LEVEL=INFO

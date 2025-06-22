@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 import json
 
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
 
 class ConfigManager:
     """Manages configuration files and settings for the package."""
@@ -49,6 +54,10 @@ class ConfigManager:
             "ai_service": "",  # Auto-detection if empty
             "add_section_numbers": True,
             "verbose_logging": False,
+            "file_paths": {
+                "input_folder": "input",
+                "output_folder": "output"
+            },
             "openai": {
                 "api_key": "",
                 "model": "gpt-4o",
@@ -76,20 +85,22 @@ class ConfigManager:
     
     def load_config(self) -> Dict[str, Any]:
         """Load configuration from file, creating default if needed."""
-        if not self.config_file.exists():
-            return self.get_default_config()
-        
-        try:
-            with open(self.config_file, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            
-            # Merge with defaults to ensure all keys exist
-            default_config = self.get_default_config()
-            return self._merge_configs(default_config, config)
-            
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Warning: Could not load config file: {e}")
-            return self.get_default_config()
+        # Start with default configuration
+        config = self.get_default_config()
+
+        # Load from config file if it exists
+        if self.config_file.exists():
+            try:
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    file_config = json.load(f)
+                config = self._merge_configs(config, file_config)
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"Warning: Could not load config file: {e}")
+
+        # Load environment variables and merge them
+        config = self._merge_env_vars(config)
+
+        return config
     
     def save_config(self, config: Dict[str, Any]) -> bool:
         """Save configuration to file."""
@@ -105,14 +116,113 @@ class ConfigManager:
     def _merge_configs(self, default: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
         """Recursively merge user config with defaults."""
         result = default.copy()
-        
+
         for key, value in user.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
                 result[key] = self._merge_configs(result[key], value)
             else:
                 result[key] = value
-        
+
         return result
+
+    def _merge_env_vars(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Merge environment variables into configuration."""
+        # Load .env file if available
+        if load_dotenv:
+            load_dotenv()
+
+        # File paths configuration
+        input_folder = os.getenv('INPUT_FOLDER')
+        if input_folder:
+            config['file_paths']['input_folder'] = input_folder
+
+        output_folder = os.getenv('OUTPUT_FOLDER')
+        if output_folder:
+            config['file_paths']['output_folder'] = output_folder
+
+        # AI service configuration
+        ai_service = os.getenv('AI_SERVICE')
+        if ai_service:
+            config['ai_service'] = ai_service
+
+        # OpenAI configuration
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        if openai_api_key:
+            config['openai']['api_key'] = openai_api_key
+
+        openai_model = os.getenv('OPENAI_MODEL')
+        if openai_model:
+            config['openai']['model'] = openai_model
+
+        openai_max_tokens = os.getenv('OPENAI_MAX_TOKENS')
+        if openai_max_tokens:
+            try:
+                config['openai']['max_tokens'] = int(openai_max_tokens)
+            except ValueError:
+                pass
+
+        openai_temperature = os.getenv('OPENAI_TEMPERATURE')
+        if openai_temperature:
+            try:
+                config['openai']['temperature'] = float(openai_temperature)
+            except ValueError:
+                pass
+
+        openai_base_url = os.getenv('OPENAI_BASE_URL')
+        if openai_base_url:
+            config['openai']['base_url'] = openai_base_url
+
+        # OLLAMA configuration
+        ollama_base_url = os.getenv('OLLAMA_BASE_URL')
+        if ollama_base_url:
+            config['ollama']['base_url'] = ollama_base_url
+
+        ollama_model = os.getenv('OLLAMA_MODEL')
+        if ollama_model:
+            config['ollama']['model'] = ollama_model
+
+        ollama_timeout = os.getenv('OLLAMA_TIMEOUT')
+        if ollama_timeout:
+            try:
+                config['ollama']['timeout'] = int(ollama_timeout)
+            except ValueError:
+                pass
+
+        ollama_temperature = os.getenv('OLLAMA_TEMPERATURE')
+        if ollama_temperature:
+            try:
+                config['ollama']['temperature'] = float(ollama_temperature)
+            except ValueError:
+                pass
+
+        # Image processing configuration
+        image_max_size_mb = os.getenv('IMAGE_MAX_SIZE_MB')
+        if image_max_size_mb:
+            try:
+                config['image_processing']['max_size_mb'] = int(image_max_size_mb)
+            except ValueError:
+                pass
+
+        image_quality = os.getenv('IMAGE_QUALITY_COMPRESSION')
+        if image_quality:
+            try:
+                config['image_processing']['quality_compression'] = int(image_quality)
+            except ValueError:
+                pass
+
+        image_max_pixels = os.getenv('IMAGE_MAX_SIZE_PIXELS')
+        if image_max_pixels:
+            try:
+                config['image_processing']['max_size_pixels'] = int(image_max_pixels)
+            except ValueError:
+                pass
+
+        # Logging configuration
+        log_level = os.getenv('LOG_LEVEL')
+        if log_level:
+            config['logging']['level'] = log_level
+
+        return config
     
     def create_env_file(self, config: Dict[str, Any]) -> bool:
         """Create .env file from configuration."""
@@ -127,7 +237,14 @@ class ConfigManager:
             # AI Service selection
             if config.get("ai_service"):
                 env_content.append(f"AI_SERVICE={config['ai_service']}")
-            
+
+            # File paths settings
+            file_paths_config = config.get("file_paths", {})
+            if file_paths_config.get("input_folder"):
+                env_content.append(f"INPUT_FOLDER={file_paths_config['input_folder']}")
+            if file_paths_config.get("output_folder"):
+                env_content.append(f"OUTPUT_FOLDER={file_paths_config['output_folder']}")
+
             # OpenAI settings
             openai_config = config.get("openai", {})
             if openai_config.get("api_key"):
@@ -219,6 +336,18 @@ class ConfigManager:
         quality = image_config.get("quality_compression", 0)
         if not (1 <= quality <= 100):
             issues.append("Image quality compression must be between 1 and 100.")
+
+        # Check file paths settings
+        file_paths_config = config.get("file_paths", {})
+        input_folder = file_paths_config.get("input_folder", "")
+        output_folder = file_paths_config.get("output_folder", "")
+
+        if not input_folder:
+            issues.append("Input folder path cannot be empty.")
+        if not output_folder:
+            issues.append("Output folder path cannot be empty.")
+        if input_folder == output_folder:
+            issues.append("Input and output folders cannot be the same.")
 
         return issues
 
@@ -334,3 +463,15 @@ def ensure_config_exists() -> Dict[str, Any]:
         config_manager.save_config(config)
         config_manager.create_env_file(config)
     return config
+
+
+def get_input_folder() -> str:
+    """Get the configured input folder path."""
+    config = get_config()
+    return config.get('file_paths', {}).get('input_folder', 'input')
+
+
+def get_output_folder() -> str:
+    """Get the configured output folder path."""
+    config = get_config()
+    return config.get('file_paths', {}).get('output_folder', 'output')
