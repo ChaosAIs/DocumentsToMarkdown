@@ -1,4 +1,5 @@
 input/
 output/
+!demo_files/output/
 __pycache__/
 .env
