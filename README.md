@@ -11,7 +11,10 @@ A comprehensive Python library for converting various document types to Markdown
 ### Installation
 
 ```bash
-# Install from PyPI
+# Install the latest version from PyPI
+pip install documents-to-markdown==1.0.0
+
+# Or install without version specification (gets latest)
 pip install documents-to-markdown
 
 # Or install from source
@@ -153,7 +156,10 @@ for result in results['results']:
 After installing the package, you can use the command-line interface:
 
 ```bash
-# Install the package
+# Install the specific version
+pip install documents-to-markdown==1.0.0
+
+# Or install latest version
 pip install documents-to-markdown
 
 # Now you can use the CLI commands
@@ -870,7 +876,10 @@ documents-to-markdown --config set ai_service openai
 
 **Missing Dependencies:**
 ```bash
-# Reinstall package
+# Reinstall specific version
+pip install --upgrade documents-to-markdown==1.0.0
+
+# Or reinstall latest version
 pip install --upgrade documents-to-markdown
 
 # Development installation
